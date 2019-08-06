@@ -45,7 +45,6 @@ extension App {
     let reducer: Reducer<App.State> { state, action in
         switch action {
         case .modify(.increase):
-            // Please let us implicitly return from switches we beg of you core team.
             state.counter += 1
         case .modify(.decrease):
             state.counter -= 1
