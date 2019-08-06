@@ -7,7 +7,7 @@
 //
 
 /**
- Middleware is a structure that allows you to modify, filter out and dispatch more
+ Middleware is a structure that allows you to modify, filter out and create more
  actions, before the action being handled reaches the store.
  */
 public struct Middleware<State, Action> {
@@ -32,17 +32,26 @@ public struct Middleware<State, Action> {
      Initialises the middleware by concatenating the transformative functions from
      the middleware that was passed in.
      */
-    public init(_ first: Middleware, _ rest: Middleware...) {
-        self = .init(first, rest)
+    public init(_ middleware: Middleware...) {
+        self = .init(middleware)
     }
     
     /**
      Initialises the middleware by concatenating the transformative functions from
      the middleware that was passed in.
      */
-    public init<S: Sequence>(_ first: Middleware, _ rest: S) where S.Element == Middleware {
-        self = rest.reduce(first) {
+    public init<S: Sequence>(_ middleware: S) where S.Element == Middleware {
+        self = middleware.reduce(.init()) {
             $0.concat($1)
+        }
+    }
+    
+    /// Concatenates the transform function of the passed `Middleware` onto the callee's transform.
+    public func concat(_ other: Middleware) -> Middleware {
+        .init { state, action in
+            self.transform(state, action).flatMap {
+                other.transform(state, $0)
+            }
         }
     }
     
@@ -52,15 +61,6 @@ public struct Middleware<State, Action> {
             self.transform(state, action).map {
                 effect(state, $0)
                 return $0
-            }
-        }
-    }
-    
-    /// Concatenates the transform function of the passed `Middleware` onto the callee's transform.
-    public func concat(_ other: Middleware) -> Middleware {
-        .init { state, action in
-            self.transform(state, action).flatMap {
-                other.transform(state, $0)
             }
         }
     }

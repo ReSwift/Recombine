@@ -26,8 +26,8 @@ public class Store<State, Action>: ObservableObject, Subscriber {
         .store(in: &cancellables)
     }
 
-    public func dispatch(_ action: Action) {
-        actions.send(action)
+    public func dispatch(_ actions: Action...) {
+        dispatch(actions)
     }
 
     public func dispatch<S: Sequence>(_ actions: S) where S.Element == Action {

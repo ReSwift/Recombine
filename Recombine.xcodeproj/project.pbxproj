@@ -177,8 +177,8 @@
 				625E66861C1FF97E0027C288 /* Recombine.h */,
 				625E66881C1FF97E0027C288 /* Info.plist */,
 				9E1F6FB81DEE810400912955 /* Middleware.swift */,
-				9E1F6E7B1DDD190B00912955 /* Store.swift */,
 				625E66B81C1FFC880027C288 /* Reducer.swift */,
+				9E1F6E7B1DDD190B00912955 /* Store.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
