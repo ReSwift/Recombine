@@ -10,7 +10,7 @@ import Combine
 
 public class Store<State, Action>: ObservableObject, Subscriber {
     @Published public private(set) var state: State
-    let actions = PassthroughSubject<Action, Never>()
+    public let actions = PassthroughSubject<Action, Never>()
     private var cancellables = Set<AnyCancellable>()
 
     public required init(state: State, reducer: Reducer<State, Action>, middleware: Middleware<State, Action> = .init()) {
@@ -26,8 +26,8 @@ public class Store<State, Action>: ObservableObject, Subscriber {
         .store(in: &cancellables)
     }
 
-    public func dispatch(_ actions: Action...) {
-        dispatch(actions)
+    public func dispatch(_ action: Action) {
+        actions.send(action)
     }
 
     public func dispatch<S: Sequence>(_ actions: S) where S.Element == Action {

@@ -27,20 +27,6 @@ class StoreMiddlewareTests: XCTestCase {
     }
 
     /**
-     it middleware can access the store's state
-     */
-    func testMiddlewareCanAccessState() {
-        let testValue = "OK"
-        let store = Store(state: TestStringAppState(testValue: testValue),
-                          reducer: testValueStringReducer,
-                          middleware: stateAccessingMiddleware.sideEffect { print($0, $1) })
-
-        store.dispatch(.string("Action That Won't Go Through"))
-
-        XCTAssertEqual(store.state.testValue, testValue + testValue)
-    }
-
-    /**
      it middleware should not be executed if the previous middleware returned nil
      */
     func testMiddlewareSkipsReducersWhenPassedNil() {
@@ -52,7 +38,7 @@ class StoreMiddlewareTests: XCTestCase {
         var store = Store(state: state,
                           reducer: testValueStringReducer,
                           middleware: Middleware(filteringMiddleware1, filteringMiddleware2))
-        store.dispatch(.string("Action That Won't Go Through"))
+        store.dispatch([.string("Action That Won't Go Through")])
 
         store = Store(state: state,
                       reducer: testValueStringReducer,
