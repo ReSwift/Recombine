@@ -36,7 +36,7 @@ enum AppAction: Action {
 Your reducer needs to respond to these different actions, that can be done by switching over the value of action:
 
 ```swift
-let appReducer: Reducer<AppState> { action, state in
+let appReducer: Reducer<AppState> { state, action in
     var state = state
     switch action {
     case .modify(.increase):
