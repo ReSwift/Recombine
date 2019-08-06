@@ -40,9 +40,10 @@ Your reducer needs to respond to these different actions, that can be done by sw
 let appReducer: Reducer<AppState> { state, action in
     switch action {
     case .modify(.increase):
-        return AppState(counter: state.counter + 1)
+        // Please let us implicitly return from switches we beg of you core team.
+        return .init(counter: state.counter + 1)
     case .modify(.decrease):
-        return AppState(counter: state.counter - 1)
+        return .init(counter: state.counter - 1)
     }
 }
 ```
