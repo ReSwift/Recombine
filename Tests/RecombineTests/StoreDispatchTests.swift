@@ -7,7 +7,7 @@
 //
 
 import XCTest
-import Recombine
+@testable import Recombine
 import Combine
 
 fileprivate typealias StoreTestType = Store<TestAppState, SetAction>
