@@ -40,7 +40,6 @@ extension App {
 Your reducer needs to respond to these different actions, that can be done by switching over the value of action:
 
 ```swift
-// I recommend using a tool to enable lensing like Sourcery when working with a state with more than a handful of elements.
 extension App {
     let reducer: Reducer<App.State> { state, action in
         switch action {
