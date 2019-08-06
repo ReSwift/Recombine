@@ -12,7 +12,7 @@
  */
 public struct Middleware<State, Action> {
     typealias Transform = (State, Action) -> [Action]
-    internal let transform: (State, Action) -> [Action]
+    internal let transform: Transform
     
     /// Create a blank slate Middleware.
     public init() {
