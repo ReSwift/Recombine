@@ -16,7 +16,7 @@ For a very simple app, one that maintains a counter that can be increased and de
 ```swift
 enum App {
     struct State {
-      let counter: Int
+      var counter: Int
     }
 }
 ```
@@ -46,9 +46,9 @@ extension App {
         switch action {
         case .modify(.increase):
             // Please let us implicitly return from switches we beg of you core team.
-            return .init(counter: state.counter + 1)
+            state.counter += 1
         case .modify(.decrease):
-            return .init(counter: state.counter - 1)
+            state.counter -= 1
         }
     }
 }
