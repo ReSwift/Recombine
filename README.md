@@ -78,7 +78,7 @@ window.rootViewController = UIHostingController(
 )
 ```
 
-Now it can be accessed from any of out views!
+Now it can be accessed from any of our views!
 
 ```swift
 @EnvironmentObject var store: Store<App.State, App.Action>
