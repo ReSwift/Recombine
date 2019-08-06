@@ -69,6 +69,21 @@ extension App {
 }
 ```
 
+Now let's inject the store as an environment variable so that any views in our hierarchy can access it and automatically be updated when state changes:
+
+```swift
+// In SceneDelegate.swift.
+window.rootViewController = UIHostingController(
+    rootView: ContentView().environmentObject(App.store)
+)
+```
+
+Now it can be accessed from any of out views!
+
+```swift
+@EnvironmentObject var store: Store<App.State, App.Action>
+```
+
 # Credits
 
 - Huge thanks to [Evan Czaplicki](https://github.com/evancz) for creating [Elm](https://github.com/elm-lang), the first language to implement unidirectional data flow as a paradigm.
