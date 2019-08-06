@@ -15,7 +15,7 @@ For a very simple app, one that maintains a counter that can be increased and de
 
 ```swift
 struct AppState {
-  var counter: Int
+  let counter: Int
 }
 ```
 
@@ -36,15 +36,14 @@ enum AppAction: Action {
 Your reducer needs to respond to these different actions, that can be done by switching over the value of action:
 
 ```swift
+// I recommend using a tool to enable lensing like Sourcery when working with a state with more than a handful of elements.
 let appReducer: Reducer<AppState> { state, action in
-    var state = state
     switch action {
     case .modify(.increase):
-        state.counter += 1
+        return AppState(counter: state.counter + 1)
     case .modify(.decrease):
-        state.counter -= 1
+        return AppState(counter: state.counter - 1)
     }
-    return state
 }
 ```
 
@@ -53,6 +52,10 @@ let appReducer: Reducer<AppState> { state, action in
 - Huge thanks to [Evan Czaplicki](https://github.com/evancz) for creating [Elm](https://github.com/elm-lang), the first language to implement unidirectional data flow as a paradigm.
 - Thanks a lot to [Dan Abramov](https://github.com/gaearon) for building [Redux](https://github.com/reactjs/redux), many ideas in here were provided by his library.
 - Thanks a lot to [Benjamin Encz](https://github.com/Ben-G) for building [ReSwift](https://github.com/ReSwift/ReSwift), the base from which this project was originally derived.
+
+# Example Projects
+
+[Magnetar](https://github.com/Qata/Magnetar)
 
 # Get in touch
 
