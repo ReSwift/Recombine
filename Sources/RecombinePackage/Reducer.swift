@@ -7,11 +7,11 @@
 //
 
 public struct Reducer<State, Action> {
-    public typealias Transform = (_ state: State, _ action: Action) -> State
-    let transform: Transform
+    public typealias Transform = (_ state: inout State, _ action: Action) -> Void
+    public let transform: Transform
     
     private init() {
-        self.transform = { state, _ in state }
+        self.transform = { _, _ in }
     }
     
     public init(_ transform: @escaping Transform) {
@@ -30,7 +30,8 @@ public struct Reducer<State, Action> {
 
     public func concat(_ other: Reducer) -> Reducer {
         .init { state, action in
-            other.transform(self.transform(state, action), action)
+            self.transform(&state, action)
+            other.transform(&state, action)
         }
     }
 }

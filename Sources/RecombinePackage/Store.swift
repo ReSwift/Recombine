@@ -18,7 +18,7 @@ public class Store<State, Action>: ObservableObject, Subscriber {
         actions.scan(state) { state, action in
             middleware
                 .transform(state, action)
-                .reduce(state, reducer.transform)
+                .reduce(into: state, reducer.transform)
         }
         .sink(receiveValue: { [unowned self] state in
             self.state = state

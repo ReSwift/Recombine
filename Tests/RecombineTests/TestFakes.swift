@@ -32,18 +32,18 @@ enum SetAction: Equatable {
 let testReducer: Reducer<TestAppState, SetAction> = .init { state, action in
     switch action {
     case let .int(value):
-        return TestAppState(testValue: value)
+        state.testValue = value
     default:
-        return state
+        break
     }
 }
 
 let testValueStringReducer: Reducer<TestStringAppState, SetAction> = .init { state, action in
     switch action {
     case let .string(value):
-        return TestStringAppState(testValue: value)
+        state.testValue = value
     default:
-        return state
+        break
     }
 }
 

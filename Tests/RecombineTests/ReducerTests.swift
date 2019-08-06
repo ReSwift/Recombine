@@ -17,17 +17,16 @@ class MockReducerContainer<Action> {
     init() {
         reducer = .init { state, action in
             self.calledWithAction.append(action)
-            return state
         }
     }
 }
 
 let increaseByOneReducer: Reducer<CounterState, SetAction> = .init { state, action in
-    CounterState(count: state.count + 1)
+    state.count += 1
 }
 
 let increaseByTwoReducer: Reducer<CounterState, SetAction> = .init { state, action in
-    CounterState(count: state.count + 2)
+    state.count += 2
 }
 
 class ReducerTests: XCTestCase {
@@ -40,7 +39,8 @@ class ReducerTests: XCTestCase {
         let mockReducer2 = MockReducerContainer<SetAction>()
         let combinedReducer = Reducer(mockReducer1.reducer, mockReducer2.reducer)
 
-        _ = combinedReducer.transform(CounterState(), .noop)
+        var state = CounterState()
+        _ = combinedReducer.transform(&state, .noop)
 
         XCTAssertEqual(mockReducer1.calledWithAction.count, 1)
         XCTAssertEqual(mockReducer2.calledWithAction.count, 1)
@@ -54,8 +54,9 @@ class ReducerTests: XCTestCase {
     func testCombinesReducerResults() {
         
         let combinedReducer = Reducer(increaseByOneReducer, increaseByTwoReducer)
-        let newState = combinedReducer.transform(CounterState(), .noop)
+        var state = CounterState()
+        combinedReducer.transform(&state, .noop)
 
-        XCTAssertEqual(newState.count, 3)
+        XCTAssertEqual(state.count, 3)
     }
 }
