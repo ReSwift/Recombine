@@ -11,9 +11,42 @@ Recombine relies on three principles:
 
 ![](Docs/img/recombine_concept.png)
 
-# Installation
+For a very simple app, one that maintains a counter that can be increased and decreased, you can define the app state as following:
 
-Whoa slow down, this is beta software at the moment.
+```swift
+struct AppState {
+  var counter: Int
+}
+```
+
+You would also define two actions, one for increasing and one for decreasing the counter. For the simple actions in this example we can use a very basic enum:
+
+```swift
+// It's recommended that you use enums for your actions to ensure a well typed implementation.
+enum AppAction: Action {
+    case modify(Modification)
+    
+    enum Modification {
+        case increase
+        case decrease
+    }
+}
+```
+
+Your reducer needs to respond to these different actions, that can be done by switching over the value of action:
+
+```swift
+let appReducer: Reducer<AppState> { action, state in
+    var state = state
+    switch action {
+    case .modify(.increase):
+        state.counter += 1
+    case .modify(.decrease):
+        state.counter -= 1
+    }
+    return state
+}
+```
 
 # Credits
 
