@@ -14,8 +14,10 @@ Recombine relies on three principles:
 For a very simple app, one that maintains a counter that can be increased and decreased, you can define the app state as following:
 
 ```swift
-struct AppState {
-  let counter: Int
+enum App {
+    struct State {
+      let counter: Int
+    }
 }
 ```
 
@@ -23,12 +25,14 @@ You would also define two actions, one for increasing and one for decreasing the
 
 ```swift
 // It's recommended that you use enums for your actions to ensure a well typed implementation.
-enum AppAction: Action {
-    case modify(Modification)
-    
-    enum Modification {
-        case increase
-        case decrease
+extension App {
+    enum Action {
+        case modify(Modification)
+
+        enum Modification {
+            case increase
+            case decrease
+        }
     }
 }
 ```
@@ -37,14 +41,31 @@ Your reducer needs to respond to these different actions, that can be done by sw
 
 ```swift
 // I recommend using a tool to enable lensing like Sourcery when working with a state with more than a handful of elements.
-let appReducer: Reducer<AppState> { state, action in
-    switch action {
-    case .modify(.increase):
-        // Please let us implicitly return from switches we beg of you core team.
-        return .init(counter: state.counter + 1)
-    case .modify(.decrease):
-        return .init(counter: state.counter - 1)
+extension App {
+    let reducer: Reducer<App.State> { state, action in
+        switch action {
+        case .modify(.increase):
+            // Please let us implicitly return from switches we beg of you core team.
+            return .init(counter: state.counter + 1)
+        case .modify(.decrease):
+            return .init(counter: state.counter - 1)
+        }
     }
+}
+```
+
+A single `Reducer` should only deal with a single field of the state struct. You can nest multiple reducers within your main reducer to provide separation of concerns.
+
+In order to have a predictable app state, it is important that the reducer is always free of side effects, it receives the current app state and an action and returns the new app state.
+
+To maintain our state and delegate the actions to the reducers, we need a store. Let's call it `App.store`:
+
+```swift
+extension App {
+    static let store = Store<State, Action>(
+        state: .init(counter: 0),
+        reducer: reducer
+    )
 }
 ```
 
