@@ -20,9 +20,9 @@ public class Store<State, Action>: ObservableObject, Subscriber {
                 .transform(state, action)
                 .reduce(into: state, reducer.transform)
         }
-        .sink(receiveValue: { [unowned self] state in
+        .sink { [unowned self] state in
             self.state = state
-        })
+        }
         .store(in: &cancellables)
     }
 
