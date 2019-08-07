@@ -13,12 +13,12 @@
 public struct Middleware<State, Action> {
     typealias Transform = (State, Action) -> [Action]
     internal let transform: Transform
-    
+
     /// Create a blank slate Middleware.
     public init() {
         self.transform = { [$1] }
     }
-    
+
     /**
      Initialises the middleware with a transformative function.
      
@@ -27,15 +27,15 @@ public struct Middleware<State, Action> {
     internal init(_ transform: @escaping Transform) {
         self.transform = transform
     }
-    
+
     /**
      Initialises the middleware by concatenating the transformative functions from
      the middleware that was passed in.
      */
-    public init(_ middleware: Middleware...) {
+    public init(_ middleware: Self...) {
         self = .init(middleware)
     }
-    
+
     /**
      Initialises the middleware by concatenating the transformative functions from
      the middleware that was passed in.
@@ -45,7 +45,7 @@ public struct Middleware<State, Action> {
             $0.concat($1)
         }
     }
-    
+
     /// Concatenates the transform function of the passed `Middleware` onto the callee's transform.
     public func concat(_ other: Middleware) -> Middleware {
         .init { state, action in
@@ -54,9 +54,9 @@ public struct Middleware<State, Action> {
             }
         }
     }
-    
+
     /// Safe encapsulation of side effects guaranteed not to affect the action being passed through the middleware.
-    public func sideEffect(_ effect: @escaping (State, Action) -> Void) -> Middleware {
+    public func sideEffect(_ effect: @escaping (State, Action) -> Void) -> Self {
         .init { state, action in
             self.transform(state, action).map {
                 effect(state, $0)
@@ -64,36 +64,36 @@ public struct Middleware<State, Action> {
             }
         }
     }
-    
+
     /// Transform the action into another action.
-    public func map(_ transform: @escaping (State, Action) -> Action) -> Middleware {
+    public func map(_ transform: @escaping (State, Action) -> Action) -> Self {
         .init { state, action in
             self.transform(state, action).map {
                 transform(state, $0)
             }
         }
     }
-    
+
     /// One to many pattern allowing one action to be turned into multiple.
-    public func flatMap<S: Sequence>(_ transform: @escaping (State, Action) -> S) -> Middleware where S.Element == Action {
+    public func flatMap<S: Sequence>(_ transform: @escaping (State, Action) -> S) -> Self where S.Element == Action {
         .init { state, action in
             self.transform(state, action).flatMap {
                 transform(state, $0)
             }
         }
     }
-    
+
     /// Filters while mapping actions to new actions.
-    public func filterMap(_ transform: @escaping (State, Action) -> Action?) -> Middleware {
+    public func filterMap(_ transform: @escaping (State, Action) -> Action?) -> Self {
         .init { state, action in
             self.transform(state, action).compactMap {
                 transform(state, $0)
             }
         }
     }
-    
+
     /// Drop the action iff `isIncluded(action) != true`.
-    public func filter(_ isIncluded: @escaping (State, Action) -> Bool) -> Middleware {
+    public func filter(_ isIncluded: @escaping (State, Action) -> Bool) -> Self {
         .init { state, action in
             self.transform(state, action).filter {
                 isIncluded(state, $0)

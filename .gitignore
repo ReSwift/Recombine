@@ -29,6 +29,7 @@ xcshareddata/
 ## Obj-C/Swift specific
 *.hmap
 *.ipa
+*.xcodeproj/
 
 # Swift Package Manager
 #
