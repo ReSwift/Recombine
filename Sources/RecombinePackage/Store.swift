@@ -7,19 +7,23 @@
 //
 
 import Combine
+import Foundation
 
 public class Store<State, Action>: ObservableObject, Subscriber {
     @Published public private(set) var state: State
     public let actions = PassthroughSubject<Action, Never>()
     private var cancellables = Set<AnyCancellable>()
 
-    public required init(state: State, reducer: Reducer<State, Action>, middleware: Middleware<State, Action> = .init()) {
+    // TODO: Change this to an init generic over reducer when the @Published crashing issue with protocols is fixed.
+    public required init(state: State, reducer: MutatingReducer<State, Action>, middleware: Middleware<State, Action> = .init()) {
         self.state = state
         actions.scan(state) { state, action in
-            middleware
-                .transform(state, action)
-                .reduce(into: state, reducer.transform)
+            reducer.reduce(
+                state: state,
+                actions: middleware.transform(state, action)
+            )
         }
+        .receive(on: RunLoop.main)
         .sink { [unowned self] state in
             self.state = state
         }
