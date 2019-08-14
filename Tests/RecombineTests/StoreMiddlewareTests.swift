@@ -19,7 +19,7 @@ class StoreMiddlewareTests: XCTestCase {
         let store = Store(state: TestStringAppState(),
                           reducer: testValueStringReducer,
                           middleware: Middleware(firstMiddleware, secondMiddleware),
-                          runLoop: nil)
+                          publishOn: nil)
         
         let action = SetAction.string("OK")
         store.dispatch(action)
@@ -34,7 +34,7 @@ class StoreMiddlewareTests: XCTestCase {
         var value = "Incorrect"
         let store = Store(state: TestStringAppState(testValue: value),
                           reducer: testValueStringReducer,
-                          middleware: stateAccessingMiddleware.sideEffect { _, _ in value = "Correct" }, runLoop: nil)
+                          middleware: stateAccessingMiddleware.sideEffect { _, _ in value = "Correct" }, publishOn: nil)
 
         store.dispatch(.string("Action That Won't Go Through"))
 
@@ -53,19 +53,19 @@ class StoreMiddlewareTests: XCTestCase {
         var store = Store(state: state,
                           reducer: testValueStringReducer,
                           middleware: Middleware(filteringMiddleware1, filteringMiddleware2),
-                          runLoop: nil)
+                          publishOn: nil)
         store.dispatch(.string("Action That Won't Go Through"))
 
         store = Store(state: state,
                       reducer: testValueStringReducer,
                       middleware: filteringMiddleware1,
-                      runLoop: nil)
+                      publishOn: nil)
         store.dispatch(.string("Action That Won't Go Through"))
 
         store = Store(state: state,
                       reducer: testValueStringReducer,
                       middleware: filteringMiddleware2,
-                      runLoop: nil)
+                      publishOn: nil)
         store.dispatch(.string("Action That Won't Go Through"))
     }
 
@@ -77,7 +77,7 @@ class StoreMiddlewareTests: XCTestCase {
         let store = Store(state: CounterState(count: 0),
                           reducer: increaseByOneReducer,
                           middleware: multiplexingMiddleware,
-                          runLoop: nil)
+                          publishOn: nil)
         store.dispatch(.noop)
         XCTAssertEqual(store.state.count, 3)
     }

@@ -15,7 +15,7 @@ public class Store<State, Action>: ObservableObject, Subscriber {
     private var cancellables = Set<AnyCancellable>()
 
     // TODO: Change this to an init generic over Reducer and Scheduler when the @Published crashing issue with protocols is fixed.
-    public required init(state: State, reducer: MutatingReducer<State, Action>, middleware: Middleware<State, Action> = .init(), runLoop: RunLoop?) {
+    public required init(state: State, reducer: MutatingReducer<State, Action>, middleware: Middleware<State, Action> = .init(), publishOn scheduler: RunLoop?) {
         self.state = state
         let statePublisher = actions.scan(state) { state, action in
             reducer.reduce(
@@ -23,16 +23,9 @@ public class Store<State, Action>: ObservableObject, Subscriber {
                 actions: middleware.transform(state, action)
             )
         }
-        let publisher: AnyPublisher<State, Never>
-        if let runLoop = runLoop {
-            publisher = statePublisher
-                .receive(on: runLoop)
-                .eraseToAnyPublisher()
-        } else {
-            publisher = statePublisher
-                .eraseToAnyPublisher()
-        }
-        publisher
+        (scheduler
+            .map { statePublisher.receive(on: $0).eraseToAnyPublisher() }
+            ?? statePublisher.eraseToAnyPublisher())
         .sink { [unowned self] state in
             self.state = state
         }
