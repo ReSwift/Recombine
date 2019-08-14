@@ -39,20 +39,19 @@ class DeInitStore<State>: Store<State, SetAction> {
     }
 
     convenience init(state: State,
-                     reducer: Reducer<State, SetAction>,
+                     reducer: MutatingReducer<State, SetAction>,
                      middleware: Middleware<State, SetAction> = Middleware(),
                      deInitAction: @escaping () -> Void) {
         self.init(state: state,
                   reducer: reducer,
-                  middleware: middleware)
+                  middleware: middleware,
+                  runLoop: nil)
         self.deInitAction = deInitAction
     }
     
-    required init(state: State,
-                  reducer: Reducer<State, SetAction>,
-                  middleware: Middleware<State, SetAction>) {
+    required init(state: State, reducer: MutatingReducer<State, SetAction>, middleware: Middleware<State, SetAction> = .init(), runLoop: RunLoop?) {
         super.init(state: state,
                    reducer: reducer,
-                   middleware: middleware)
+                   middleware: middleware, runLoop: runLoop)
     }
 }

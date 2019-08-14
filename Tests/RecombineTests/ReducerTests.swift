@@ -12,7 +12,7 @@ import XCTest
 class MockReducerContainer<Action> {
 
     var calledWithAction: [Action] = []
-    var reducer: Reducer<CounterState, Action>!
+    var reducer: MutatingReducer<CounterState, Action>!
 
     init() {
         reducer = .init { state, action in
@@ -21,11 +21,11 @@ class MockReducerContainer<Action> {
     }
 }
 
-let increaseByOneReducer: Reducer<CounterState, SetAction> = .init { state, action in
+let increaseByOneReducer: MutatingReducer<CounterState, SetAction> = .init { state, action in
     state.count += 1
 }
 
-let increaseByTwoReducer: Reducer<CounterState, SetAction> = .init { state, action in
+let increaseByTwoReducer: MutatingReducer<CounterState, SetAction> = .init { state, action in
     state.count += 2
 }
 
@@ -37,7 +37,7 @@ class ReducerTests: XCTestCase {
     func testCallsReducersOnce() {
         let mockReducer1 = MockReducerContainer<SetAction>()
         let mockReducer2 = MockReducerContainer<SetAction>()
-        let combinedReducer = Reducer(mockReducer1.reducer, mockReducer2.reducer)
+        let combinedReducer = MutatingReducer(mockReducer1.reducer, mockReducer2.reducer)
 
         var state = CounterState()
         _ = combinedReducer.transform(&state, .noop)
@@ -53,7 +53,7 @@ class ReducerTests: XCTestCase {
      */
     func testCombinesReducerResults() {
         
-        let combinedReducer = Reducer(increaseByOneReducer, increaseByTwoReducer)
+        let combinedReducer = MutatingReducer(increaseByOneReducer, increaseByTwoReducer)
         var state = CounterState()
         combinedReducer.transform(&state, .noop)
 

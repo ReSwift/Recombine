@@ -15,7 +15,7 @@ fileprivate typealias StoreTestType = Store<TestAppState, SetAction>
 class ObservableStoreDispatchTests: XCTestCase {
 
     fileprivate var store: StoreTestType!
-    var reducer: Reducer<TestAppState, SetAction>!
+    var reducer: MutatingReducer<TestAppState, SetAction>!
 
     override func setUp() {
         super.setUp()
@@ -27,7 +27,7 @@ class ObservableStoreDispatchTests: XCTestCase {
      */
     func testLiftingWorksAsExpected() {
         let subject = PassthroughSubject<SetAction, Never>()
-        store = Store(state: TestAppState(), reducer: reducer)
+        store = Store(state: TestAppState(), reducer: reducer, runLoop: nil)
         subject.subscribe(store)
         subject.send(.int(20))
         XCTAssertEqual(store.state.testValue, 20)

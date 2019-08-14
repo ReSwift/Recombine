@@ -15,7 +15,7 @@ public struct Middleware<State, Action> {
     internal let transform: Transform
 
     /// Create a blank slate Middleware.
-    public init() {
+    private init() {
         self.transform = { [$1] }
     }
 
@@ -65,6 +65,11 @@ public struct Middleware<State, Action> {
         }
     }
 
+    /// Safe encapsulation of side effects guaranteed not to affect the action being passed through the middleware.
+    public static func sideEffect(_ effect: @escaping (State, Action) -> Void) -> Self {
+        Middleware().sideEffect(effect)
+    }
+
     /// Transform the action into another action.
     public func map(_ transform: @escaping (State, Action) -> Action) -> Self {
         .init { state, action in
@@ -72,6 +77,11 @@ public struct Middleware<State, Action> {
                 transform(state, $0)
             }
         }
+    }
+
+    /// Transform the action into another action.
+    public static func map(_ transform: @escaping (State, Action) -> Action) -> Self {
+        Middleware().map(transform)
     }
 
     /// One to many pattern allowing one action to be turned into multiple.
@@ -83,6 +93,11 @@ public struct Middleware<State, Action> {
         }
     }
 
+    /// One to many pattern allowing one action to be turned into multiple.
+    public static func flatMap<S: Sequence>(_ transform: @escaping (State, Action) -> S) -> Self where S.Element == Action {
+        Middleware().flatMap(transform)
+    }
+
     /// Filters while mapping actions to new actions.
     public func filterMap(_ transform: @escaping (State, Action) -> Action?) -> Self {
         .init { state, action in
@@ -92,6 +107,11 @@ public struct Middleware<State, Action> {
         }
     }
 
+    /// Filters while mapping actions to new actions.
+    public static func filterMap(_ transform: @escaping (State, Action) -> Action?) -> Self {
+        Middleware().filterMap(transform)
+    }
+
     /// Drop the action iff `isIncluded(action) != true`.
     public func filter(_ isIncluded: @escaping (State, Action) -> Bool) -> Self {
         .init { state, action in
@@ -99,5 +119,10 @@ public struct Middleware<State, Action> {
                 isIncluded(state, $0)
             }
         }
+    }
+
+    /// Drop the action iff `isIncluded(action) != true`.
+    public static func filter(_ isIncluded: @escaping (State, Action) -> Bool) -> Self {
+        Middleware().filter(isIncluded)
     }
 }

@@ -29,7 +29,7 @@ enum SetAction: Equatable {
     case string(String)
 }
 
-let testReducer: Reducer<TestAppState, SetAction> = .init { state, action in
+let testReducer: MutatingReducer<TestAppState, SetAction> = .init { state, action in
     switch action {
     case let .int(value):
         state.testValue = value
@@ -38,7 +38,7 @@ let testReducer: Reducer<TestAppState, SetAction> = .init { state, action in
     }
 }
 
-let testValueStringReducer: Reducer<TestStringAppState, SetAction> = .init { state, action in
+let testValueStringReducer: MutatingReducer<TestStringAppState, SetAction> = .init { state, action in
     switch action {
     case let .string(value):
         state.testValue = value

@@ -18,7 +18,8 @@ class StoreMiddlewareTests: XCTestCase {
     func testDecorateDispatch() {
         let store = Store(state: TestStringAppState(),
                           reducer: testValueStringReducer,
-                          middleware: Middleware(firstMiddleware, secondMiddleware))
+                          middleware: Middleware(firstMiddleware, secondMiddleware),
+                          runLoop: nil)
         
         let action = SetAction.string("OK")
         store.dispatch(action)
@@ -33,7 +34,7 @@ class StoreMiddlewareTests: XCTestCase {
         var value = "Incorrect"
         let store = Store(state: TestStringAppState(testValue: value),
                           reducer: testValueStringReducer,
-                          middleware: stateAccessingMiddleware.sideEffect { _, _ in value = "Correct" })
+                          middleware: stateAccessingMiddleware.sideEffect { _, _ in value = "Correct" }, runLoop: nil)
 
         store.dispatch(.string("Action That Won't Go Through"))
 
@@ -51,17 +52,20 @@ class StoreMiddlewareTests: XCTestCase {
 
         var store = Store(state: state,
                           reducer: testValueStringReducer,
-                          middleware: Middleware(filteringMiddleware1, filteringMiddleware2))
+                          middleware: Middleware(filteringMiddleware1, filteringMiddleware2),
+                          runLoop: nil)
         store.dispatch(.string("Action That Won't Go Through"))
 
         store = Store(state: state,
                       reducer: testValueStringReducer,
-                      middleware: filteringMiddleware1)
+                      middleware: filteringMiddleware1,
+                      runLoop: nil)
         store.dispatch(.string("Action That Won't Go Through"))
 
         store = Store(state: state,
                       reducer: testValueStringReducer,
-                      middleware: filteringMiddleware2)
+                      middleware: filteringMiddleware2,
+                      runLoop: nil)
         store.dispatch(.string("Action That Won't Go Through"))
     }
 
@@ -72,7 +76,8 @@ class StoreMiddlewareTests: XCTestCase {
         let multiplexingMiddleware = Middleware<CounterState, SetAction>().flatMap { [$1, $1, $1] }.filterMap { _, action in action }
         let store = Store(state: CounterState(count: 0),
                           reducer: increaseByOneReducer,
-                          middleware: multiplexingMiddleware)
+                          middleware: multiplexingMiddleware,
+                          runLoop: nil)
         store.dispatch(.noop)
         XCTAssertEqual(store.state.count, 3)
     }
