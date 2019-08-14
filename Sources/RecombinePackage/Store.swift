@@ -14,7 +14,7 @@ public class Store<State, Action>: ObservableObject, Subscriber {
     public let actions = PassthroughSubject<Action, Never>()
     private var cancellables = Set<AnyCancellable>()
 
-    // TODO: Change this to an init generic over reducer when the @Published crashing issue with protocols is fixed.
+    // TODO: Change this to an init generic over Reducer and Scheduler when the @Published crashing issue with protocols is fixed.
     public required init(state: State, reducer: MutatingReducer<State, Action>, middleware: Middleware<State, Action> = .init(), runLoop: RunLoop?) {
         self.state = state
         let statePublisher = actions.scan(state) { state, action in
