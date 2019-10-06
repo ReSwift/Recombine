@@ -7,15 +7,19 @@
 //
 
 import Combine
-import Foundation
 
-public class Store<State, Action>: ObservableObject, Subscriber {
-    @Published public private(set) var state: State
+// TODO: Change state back to @Published as soon as a7fce59 of apple/swift is in a mainline Xcode release
+public class Store<State, Action>: ObservableObject {
+    public private(set) var state: State {
+        willSet {
+            objectWillChange.send()
+        }
+    }
+    public let objectWillChange = ObservableObjectPublisher()
     public let actions = PassthroughSubject<Action, Never>()
     private var cancellables = Set<AnyCancellable>()
 
-    // TODO: Change this to an init generic over Reducer and Scheduler when the @Published crashing issue with protocols is fixed.
-    public required init(state: State, reducer: MutatingReducer<State, Action>, middleware: Middleware<State, Action> = .init(), publishOn scheduler: RunLoop?) {
+    public required init<S: Scheduler, R: Reducer>(state: State, reducer: R, middleware: Middleware<State, Action> = .init(), publishOn scheduler: S?) where R.State == State, R.Action == Action {
         self.state = state
         let statePublisher = actions.scan(state) { state, action in
             reducer.reduce(
@@ -23,10 +27,9 @@ public class Store<State, Action>: ObservableObject, Subscriber {
                 actions: middleware.transform(state, action)
             )
         }
-        (scheduler
-            .map { statePublisher.receive(on: $0).eraseToAnyPublisher() }
-            ?? statePublisher.eraseToAnyPublisher())
-        .sink { [unowned self] state in
+        let publisher = scheduler.map { statePublisher.receive(on: $0).eraseToAnyPublisher() }
+            ?? statePublisher.eraseToAnyPublisher()
+        publisher.sink { [unowned self] state in
             self.state = state
         }
         .store(in: &cancellables)
@@ -39,7 +42,9 @@ public class Store<State, Action>: ObservableObject, Subscriber {
     open func dispatch<S: Sequence>(_ actions: S) where S.Element == Action {
         actions.forEach(self.actions.send)
     }
+}
 
+extension Store: Subscriber {
     public func receive(subscription: Subscription) {
         subscription.store(in: &cancellables)
         subscription.request(.unlimited)
