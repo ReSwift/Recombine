@@ -19,7 +19,7 @@ public class Store<State, Action>: ObservableObject {
     public let actions = PassthroughSubject<Action, Never>()
     private var cancellables = Set<AnyCancellable>()
 
-    public required init<S: Scheduler, R: Reducer>(state: State, reducer: R, middleware: Middleware<State, Action> = .init(), publishOn scheduler: S?) where R.State == State, R.Action == Action {
+    public required init<S: Scheduler, R: Reducer>(state: State, reducer: R, middleware: Middleware<State, Action> = .init(), publishOn scheduler: S) where R.State == State, R.Action == Action {
         self.state = state
         let statePublisher = actions.scan(state) { state, action in
             reducer.reduce(
@@ -27,9 +27,7 @@ public class Store<State, Action>: ObservableObject {
                 actions: middleware.transform(state, action)
             )
         }
-        let publisher = scheduler.map { statePublisher.receive(on: $0).eraseToAnyPublisher() }
-            ?? statePublisher.eraseToAnyPublisher()
-        publisher.sink { [unowned self] state in
+        statePublisher.receive(on: scheduler).sink { [unowned self] state in
             self.state = state
         }
         .store(in: &cancellables)

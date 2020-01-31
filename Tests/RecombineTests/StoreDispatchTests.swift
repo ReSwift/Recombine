@@ -27,7 +27,7 @@ class ObservableStoreDispatchTests: XCTestCase {
      */
     func testLiftingWorksAsExpected() {
         let subject = PassthroughSubject<SetAction, Never>()
-        store = Store(state: TestAppState(), reducer: reducer, publishOn: nil)
+        store = Store(state: TestAppState(), reducer: reducer, publishOn: ImmediateScheduler.shared)
         subject.subscribe(store)
         subject.send(.int(20))
         XCTAssertEqual(store.state.testValue, 20)

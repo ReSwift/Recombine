@@ -45,13 +45,16 @@ class DeInitStore<State>: Store<State, SetAction> {
         self.init(state: state,
                   reducer: reducer,
                   middleware: middleware,
-                  publishOn: nil)
+                  publishOn: ImmediateScheduler.shared)
         self.deInitAction = deInitAction
     }
     
-    required init(state: State, reducer: MutatingReducer<State, SetAction>, middleware: Middleware<State, SetAction> = .init(), publishOn scheduler: RunLoop?) {
-        super.init(state: state,
-                   reducer: reducer,
-                   middleware: middleware, publishOn: scheduler)
+    required init<S, R>(state: State, reducer: R, middleware: Middleware<State, SetAction> = .init(), publishOn scheduler: S) where State == R.State, SetAction == R.Action, S : Scheduler, R : Reducer {
+        super.init(
+            state: state,
+            reducer: reducer,
+            middleware: middleware,
+            publishOn: scheduler
+        )
     }
 }
