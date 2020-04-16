@@ -41,7 +41,7 @@ Your reducer needs to respond to these different actions, that can be done by sw
 
 ```swift
 extension App {
-    let reducer = Reducer<State, Action> { state, action in
+    let reducer = MutatingReducer<State, Action> { state, action in
         switch action {
         case .modify(.increase):
             state.counter += 1
