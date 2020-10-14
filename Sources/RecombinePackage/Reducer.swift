@@ -41,6 +41,10 @@ public struct PureReducer<State, Action>: Reducer {
     public init(_ transform: @escaping Transform) {
         self.transform = transform
     }
+    
+    public func callAsFunction(state: State, action: Action) -> State {
+        transform(state, action)
+    }
 
     public func concat<R: Reducer>(_ other: R) -> Self where R.Transform == Transform {
         Self.init { state, action in
@@ -63,6 +67,10 @@ public struct MutatingReducer<State, Action>: Reducer {
 
     public init(_ transform: @escaping Transform) {
         self.transform = transform
+    }
+    
+    public func callAsFunction(state: inout State, action: Action) {
+        transform(&state, action)
     }
 
     public func concat<R: Reducer>(_ other: R) -> Self where R.Transform == Transform {
