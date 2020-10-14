@@ -19,9 +19,11 @@ class ObservableStoreTests: XCTestCase {
         var deInitCount = 0
 
         autoreleasepool {
-            let store = DeInitStore(state: TestAppState(),
-                                    reducer: testReducer,
-                                    deInitAction: { deInitCount += 1 })
+            let store = DeInitStore(
+                state: TestAppState(),
+                reducer: testReducer,
+                deInitAction: { deInitCount += 1 }
+            )
             Just(.int(100)).subscribe(store)
             XCTAssertEqual(store.state.testValue, 100)
         }
@@ -38,18 +40,27 @@ class DeInitStore<State>: Store<State, SetAction> {
         deInitAction?()
     }
 
-    convenience init(state: State,
-                     reducer: MutatingReducer<State, SetAction>,
-                     middleware: Middleware<State, SetAction> = Middleware(),
-                     deInitAction: @escaping () -> Void) {
-        self.init(state: state,
-                  reducer: reducer,
-                  middleware: middleware,
-                  publishOn: ImmediateScheduler.shared)
+    convenience init(
+        state: State,
+        reducer: MutatingReducer<State, SetAction>,
+        middleware: Middleware<State, SetAction> = Middleware(),
+        deInitAction: @escaping () -> Void
+    ) {
+        self.init(
+            state: state,
+            reducer: reducer,
+            middleware: middleware,
+            publishOn: ImmediateScheduler.shared
+        )
         self.deInitAction = deInitAction
     }
-    
-    required init<S, R>(state: State, reducer: R, middleware: Middleware<State, SetAction> = .init(), publishOn scheduler: S) where State == R.State, SetAction == R.Action, S : Scheduler, R : Reducer {
+
+    required init<S, R>(
+        state: State,
+        reducer: R,
+        middleware: Middleware<State, SetAction> = .init(),
+        publishOn scheduler: S
+    ) where State == R.State, SetAction == R.Action, S : Scheduler, R : Reducer {
         super.init(
             state: state,
             reducer: reducer,

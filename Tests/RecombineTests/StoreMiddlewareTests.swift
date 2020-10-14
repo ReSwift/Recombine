@@ -84,7 +84,9 @@ class StoreMiddlewareTests: XCTestCase {
      it actions should be multiplied via the increase function
      */
     func testMiddlewareMultiplies() {
-        let multiplexingMiddleware = Middleware<CounterState, SetAction>().flatMap { [$1, $1, $1] }.filterMap { _, action in action }
+        let multiplexingMiddleware = Middleware<CounterState, SetAction>()
+            .flatMap { [$1, $1, $1] }
+            .filterMap { $1 }
         let store = Store(
             state: CounterState(count: 0),
             reducer: increaseByOneReducer,

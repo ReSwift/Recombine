@@ -9,22 +9,34 @@
 import Combine
 
 public class Store<State, Action>: ObservableObject {
-    @Published public private(set) var state: State
+    @Published
+    public private(set) var state: State
     public let actions = PassthroughSubject<Action, Never>()
     private var cancellables = Set<AnyCancellable>()
 
-    public required init<S: Scheduler, R: Reducer>(state: State, reducer: R, middleware: Middleware<State, Action> = .init(), publishOn scheduler: S) where R.State == State, R.Action == Action {
+    public required init<S: Scheduler, R: Reducer>(
+        state: State,
+        reducer: R,
+        middleware: Middleware<State, Action> = .init(),
+        publishOn scheduler: S
+    ) where R.State == State, R.Action == Action {
         self.state = state
-        let statePublisher = actions.scan(state) { state, action in
+
+        actions.scan(state) { state, action in
             reducer.reduce(
                 state: state,
                 actions: middleware.transform(state, action)
             )
         }
-        statePublisher.receive(on: scheduler).sink { [unowned self] state in
+        .receive(on: scheduler).sink { [unowned self] state in
             self.state = state
         }
         .store(in: &cancellables)
+    }
+
+    @available(iOS 14, *)
+    func lensing<SubState>(_ keyPath: KeyPath<State, SubState>) -> StoreTransform<State, SubState, Action> {
+        .init(store: self, lensing: keyPath)
     }
 
     open func dispatch(_ actions: Action...) {
@@ -48,4 +60,32 @@ extension Store: Subscriber {
     }
 
     public func receive(completion: Subscribers.Completion<Never>) {}
+}
+
+public class StoreTransform<Underlying, State, Action>: ObservableObject {
+    @Published
+    public private(set) var state: State
+    private let store: Store<Underlying, Action>
+    private let keyPath: KeyPath<Underlying, State>
+
+    @available(iOS 14, *)
+    public required init(store: Store<Underlying, Action>, lensing keyPath: KeyPath<Underlying, State>) {
+        self.store = store
+        self.keyPath = keyPath
+        state = store.state[keyPath: keyPath]
+        store.$state.map { $0[keyPath: keyPath] }.assign(to: &$state)
+    }
+
+    @available(iOS 14, *)
+    func lensing<SubState>(_ keyPath: KeyPath<State, SubState>) -> StoreTransform<Underlying, SubState, Action> {
+        .init(store: store, lensing: self.keyPath.appending(path: keyPath))
+    }
+
+    open func dispatch(_ actions: Action...) {
+        store.dispatch(actions)
+    }
+
+    open func dispatch<S: Sequence>(_ actions: S) where S.Element == Action {
+        store.dispatch(actions)
+    }
 }
