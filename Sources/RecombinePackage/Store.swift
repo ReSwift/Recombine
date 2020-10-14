@@ -35,7 +35,7 @@ public class Store<State, Action>: ObservableObject {
     }
 
     @available(iOS 14, *)
-    func lensing<SubState>(_ keyPath: KeyPath<State, SubState>) -> StoreTransform<State, SubState, Action> {
+    public func lensing<SubState>(_ keyPath: KeyPath<State, SubState>) -> StoreTransform<State, SubState, Action> {
         .init(store: self, lensing: keyPath)
     }
 
@@ -77,7 +77,7 @@ public class StoreTransform<Underlying, State, Action>: ObservableObject {
     }
 
     @available(iOS 14, *)
-    func lensing<SubState>(_ keyPath: KeyPath<State, SubState>) -> StoreTransform<Underlying, SubState, Action> {
+    public func lensing<SubState>(_ keyPath: KeyPath<State, SubState>) -> StoreTransform<Underlying, SubState, Action> {
         .init(store: store, lensing: self.keyPath.appending(path: keyPath))
     }
 
