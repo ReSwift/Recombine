@@ -8,14 +8,8 @@
 
 import Combine
 
-// TODO: Change state back to @Published as soon as a7fce59 of apple/swift is in a mainline Xcode release
 public class Store<State, Action>: ObservableObject {
-    public private(set) var state: State {
-        willSet {
-            objectWillChange.send()
-        }
-    }
-    public let objectWillChange = ObservableObjectPublisher()
+    @Published public private(set) var state: State
     public let actions = PassthroughSubject<Action, Never>()
     private var cancellables = Set<AnyCancellable>()
 
