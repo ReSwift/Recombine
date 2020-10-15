@@ -1,6 +1,7 @@
 # Recombine
 
 Recombine is a [Redux](https://github.com/reactjs/redux)-like implementation of the unidirectional data flow architecture in Swift.
+
 This project could be considered a tightened and Combine-specific sequel to [ReactiveReSwift](https://github.com/ReSwift/ReactiveReSwift).
 
 # About Recombine
