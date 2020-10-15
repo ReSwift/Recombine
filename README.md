@@ -1,6 +1,7 @@
 # Recombine
 
 Recombine is a [Redux](https://github.com/reactjs/redux)-like implementation of the unidirectional data flow architecture in Swift.
+This project could be considered a tightened and Combine-specific sequel to [ReactiveReSwift](https://github.com/ReSwift/ReactiveReSwift).
 
 # About Recombine
 
@@ -62,7 +63,8 @@ To maintain our state and delegate the actions to the reducers, we need a store.
 extension App {
     static let store = Store<State, Action>(
         state: .init(counter: 0),
-        reducer: reducer
+        reducer: reducer,
+        scheduler: RunLoop.main
     )
 }
 ```
