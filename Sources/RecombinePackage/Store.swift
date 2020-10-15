@@ -34,7 +34,6 @@ public class Store<State, Action>: ObservableObject {
         .store(in: &cancellables)
     }
 
-    @available(iOS 14, *)
     public func lensing<SubState>(_ keyPath: KeyPath<State, SubState>) -> StoreTransform<State, SubState, Action> {
         .init(store: self, lensing: keyPath)
     }
@@ -67,16 +66,20 @@ public class StoreTransform<Underlying, State, Action>: ObservableObject {
     public private(set) var state: State
     private let store: Store<Underlying, Action>
     private let keyPath: KeyPath<Underlying, State>
+    private var cancellables = Set<AnyCancellable>()
 
-    @available(iOS 14, *)
     public required init(store: Store<Underlying, Action>, lensing keyPath: KeyPath<Underlying, State>) {
         self.store = store
         self.keyPath = keyPath
         state = store.state[keyPath: keyPath]
-        store.$state.map { $0[keyPath: keyPath] }.assign(to: &$state)
+        store.$state
+            .map { $0[keyPath: keyPath] }
+            .sink { [unowned self] state in
+                self.state = state
+            }
+            .store(in: &cancellables)
     }
 
-    @available(iOS 14, *)
     public func lensing<SubState>(_ keyPath: KeyPath<State, SubState>) -> StoreTransform<Underlying, SubState, Action> {
         .init(store: store, lensing: self.keyPath.appending(path: keyPath))
     }
@@ -88,4 +91,18 @@ public class StoreTransform<Underlying, State, Action>: ObservableObject {
     open func dispatch<S: Sequence>(_ actions: S) where S.Element == Action {
         store.dispatch(actions)
     }
+}
+
+extension StoreTransform: Subscriber {
+    public func receive(subscription: Subscription) {
+        subscription.store(in: &cancellables)
+        subscription.request(.unlimited)
+    }
+
+    public func receive(_ input: Action) -> Subscribers.Demand {
+        store.dispatch(input)
+        return .unlimited
+    }
+
+    public func receive(completion: Subscribers.Completion<Never>) {}
 }
