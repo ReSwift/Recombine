@@ -143,6 +143,7 @@ Now it can be accessed from any of our views!
 # Example Projects
 
 [Recombine-Example: A counter example app that showcases networking and action recording/replay](https://github.com/ReSwift/Recombine-Example)
+
 [Magnetar](https://github.com/Qata/Magnetar)
 
 # Get in touch
