@@ -10,7 +10,7 @@ import XCTest
 @testable import Recombine
 import Combine
 
-fileprivate typealias StoreTestType = Store<TestAppState, SetAction>
+fileprivate typealias StoreTestType = Store<TestAppState, SetAction, SetAction>
 
 class ObservableStoreDispatchTests: XCTestCase {
 
@@ -26,10 +26,10 @@ class ObservableStoreDispatchTests: XCTestCase {
      it subscribes to the property we pass in and dispatches any new values
      */
     func testLiftingWorksAsExpected() {
-        let subject = PassthroughSubject<SetAction, Never>()
-        store = Store(state: TestAppState(), reducer: reducer, publishOn: ImmediateScheduler.shared)
+        let subject = PassthroughSubject<ActionStrata<SetAction, SetAction>, Never>()
+        store = Store(state: TestAppState(), reducer: reducer, middleware: .init(), publishOn: ImmediateScheduler.shared)
         subject.subscribe(store)
-        subject.send(.int(20))
+        subject.send(.refined(.int(20)))
         XCTAssertEqual(store.state.testValue, 20)
     }
 }

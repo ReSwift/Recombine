@@ -7,28 +7,32 @@
 //
 
 import Recombine
+import Combine
 
-let firstMiddleware = Middleware<TestStringAppState, SetAction>().map { state, action in
+let firstMiddleware = Middleware<TestStringAppState, SetAction, SetAction>.map { state, action -> Just<SetAction> in
     switch action {
     case let .string(value):
-        return .string(value + " First Middleware")
+        return Just(.string(value + " First Middleware"))
     default:
-        return action
+        return Just(action)
     }
 }
 
-let secondMiddleware = Middleware<TestStringAppState, SetAction>().map { state, action in
+let secondMiddleware = Middleware<TestStringAppState, SetAction, SetAction>.map { state, action -> Just<SetAction> in
     switch action {
     case let .string(value):
-        return .string(value + " Second Middleware")
+        return Just(.string(value + " Second Middleware"))
     default:
-        return action
+        return Just(action)
     }
 }
 
-let stateAccessingMiddleware = Middleware<TestStringAppState, SetAction>().map { state, action in
-    if case let .string(value) = action  {
-        return .string(state.testValue! + state.testValue!)
+let stateAccessingMiddleware = Middleware<TestStringAppState, SetAction, SetAction>().map { state, action -> AnyPublisher<SetAction, Never> in
+    if case let .string(value) = action {
+        return state.map {
+            .string($0.testValue! + $0.testValue!)
+        }
+        .eraseToAnyPublisher()
     }
-    return action
+    return Just(action).eraseToAnyPublisher()
 }

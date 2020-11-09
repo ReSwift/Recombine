@@ -20,48 +20,41 @@ class StoreMiddlewareTests: XCTestCase {
         let store = Store(
             state: TestStringAppState(),
             reducer: testValueStringReducer,
-            middleware: Middleware(firstMiddleware, secondMiddleware),
+            middleware: firstMiddleware.concat(secondMiddleware),
             publishOn: ImmediateScheduler.shared
         )
         let action = SetAction.string("OK")
-        store.dispatch(action)
+        store.dispatch(raw: action)
 
         XCTAssertEqual(store.state.testValue, "OK First Middleware Second Middleware")
-    }
-
-    /**
-     it middleware can access the store's state
-     */
-    func testMiddlewareCanAccessState() {
-        var value = "Incorrect"
-        let store = Store(
-            state: TestStringAppState(testValue: value),
-            reducer: testValueStringReducer,
-            middleware: stateAccessingMiddleware.sideEffect { _, _ in value = "Correct" },
-            publishOn: ImmediateScheduler.shared
-        )
-
-        store.dispatch(.string("Action That Won't Go Through"))
-
-        XCTAssertEqual(value, "Correct")
     }
 
     /**
      it middleware should not be executed if the previous middleware returned nil
      */
     func testMiddlewareSkipsReducersWhenPassedNil() {
-        let filteringMiddleware1 = Middleware<TestStringAppState, SetAction>().filter({ _, _ in false }).sideEffect { _, _ in XCTFail() }
-        let filteringMiddleware2 = Middleware<TestStringAppState, SetAction>().filter({ _, _ in false }).filterMap { _, _ in XCTFail(); return nil }
+        let filteringMiddleware1 = Middleware<TestStringAppState, SetAction, SetAction>()
+            .filter { _, _ in false }
+            .map { _, _ -> Empty<SetAction, Never> in
+                XCTFail()
+                return Empty()
+            }
+        let filteringMiddleware2 = Middleware<TestStringAppState, SetAction, SetAction>()
+            .filter { _, _ in false }
+            .map { _, _ -> Empty<SetAction, Never> in
+                XCTFail()
+                return Empty()
+            }
 
         let state = TestStringAppState(testValue: "OK")
 
         var store = Store(
             state: state,
             reducer: testValueStringReducer,
-            middleware: Middleware(filteringMiddleware1, filteringMiddleware2),
+            middleware: filteringMiddleware1.concat(filteringMiddleware2),
             publishOn: ImmediateScheduler.shared
         )
-        store.dispatch(.string("Action That Won't Go Through"))
+        store.dispatch(raw: .string("Action That Won't Go Through"))
 
         store = Store(
             state: state,
@@ -69,7 +62,7 @@ class StoreMiddlewareTests: XCTestCase {
             middleware: filteringMiddleware1,
             publishOn: ImmediateScheduler.shared
         )
-        store.dispatch(.string("Action That Won't Go Through"))
+        store.dispatch(raw: .string("Action That Won't Go Through"))
 
         store = Store(
             state: state,
@@ -77,23 +70,22 @@ class StoreMiddlewareTests: XCTestCase {
             middleware: filteringMiddleware2,
             publishOn: ImmediateScheduler.shared
         )
-        store.dispatch(.string("Action That Won't Go Through"))
+        store.dispatch(raw: .string("Action That Won't Go Through"))
     }
 
     /**
      it actions should be multiplied via the increase function
      */
     func testMiddlewareMultiplies() {
-        let multiplexingMiddleware = Middleware<CounterState, SetAction>()
-            .flatMap { [$1, $1, $1] }
-            .filterMap { $1 }
+        let multiplexingMiddleware = Middleware<CounterState, SetAction, SetAction>()
+            .map { [$1, $1, $1].publisher }
         let store = Store(
             state: CounterState(count: 0),
             reducer: increaseByOneReducer,
             middleware: multiplexingMiddleware,
             publishOn: ImmediateScheduler.shared
         )
-        store.dispatch(.noop)
+        store.dispatch(raw: .noop)
         XCTAssertEqual(store.state.count, 3)
     }
 }

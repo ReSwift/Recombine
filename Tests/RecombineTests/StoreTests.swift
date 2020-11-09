@@ -24,7 +24,7 @@ class ObservableStoreTests: XCTestCase {
                 reducer: testReducer,
                 deInitAction: { deInitCount += 1 }
             )
-            Just(.int(100)).subscribe(store)
+            Just(.refined(.int(100))).subscribe(store)
             XCTAssertEqual(store.state.testValue, 100)
         }
 
@@ -33,7 +33,7 @@ class ObservableStoreTests: XCTestCase {
 }
 
 // Used for deinitialization test
-class DeInitStore<State>: Store<State, SetAction> {
+class DeInitStore<State>: Store<State, SetAction, SetAction> {
     var deInitAction: (() -> Void)?
 
     deinit {
@@ -43,7 +43,7 @@ class DeInitStore<State>: Store<State, SetAction> {
     convenience init(
         state: State,
         reducer: MutatingReducer<State, SetAction>,
-        middleware: Middleware<State, SetAction> = Middleware(),
+        middleware: Middleware<State, SetAction, SetAction> = .init(),
         deInitAction: @escaping () -> Void
     ) {
         self.init(
@@ -58,7 +58,7 @@ class DeInitStore<State>: Store<State, SetAction> {
     required init<S, R>(
         state: State,
         reducer: R,
-        middleware: Middleware<State, SetAction> = .init(),
+        middleware: Middleware<State, SetAction, SetAction> = .init(),
         publishOn scheduler: S
     ) where State == R.State, SetAction == R.Action, S : Scheduler, R : Reducer {
         super.init(

@@ -14,7 +14,7 @@ public protocol Reducer {
     var transform: Transform { get }
     init()
     init(_ transform: Transform)
-    func reduce(state: State, actions: [Action]) -> State
+    func reduce(state: State, action: Action) -> State
     func concat<R: Reducer>(_ other: R) -> Self where R.Transform == Transform
 }
 
@@ -52,8 +52,8 @@ public struct PureReducer<State, Action>: Reducer {
         }
     }
     
-    public func reduce(state: State, actions: [Action]) -> State {
-        actions.reduce(state, transform)
+    public func reduce(state: State, action: Action) -> State {
+        transform(state, action)
     }
 }
 
@@ -80,7 +80,9 @@ public struct MutatingReducer<State, Action>: Reducer {
         }
     }
     
-    public func reduce(state: State, actions: [Action]) -> State {
-        actions.reduce(into: state, transform)
+    public func reduce(state: State, action: Action) -> State {
+        var s = state
+        transform(&s, action)
+        return s
     }
 }
