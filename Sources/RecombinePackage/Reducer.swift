@@ -1,11 +1,3 @@
-//
-//  Reducer.swift
-//  Recombine
-//
-//  Created by Charlotte Tortorella on 2019-07-13.
-//  Copyright © 2019 Charlotte Tortorella. All rights reserved.
-//
-
 public protocol Reducer {
     associatedtype State
     associatedtype Action
@@ -33,7 +25,7 @@ extension Reducer {
 public struct PureReducer<State, Action>: Reducer {
     public typealias Transform = (_ state: State, _ action: Action) -> State
     public let transform: Transform
-    
+
     public init() {
         self.transform = { state, _ in state }
     }
@@ -41,7 +33,7 @@ public struct PureReducer<State, Action>: Reducer {
     public init(_ transform: @escaping Transform) {
         self.transform = transform
     }
-    
+
     public func callAsFunction(state: State, action: Action) -> State {
         transform(state, action)
     }
@@ -51,7 +43,7 @@ public struct PureReducer<State, Action>: Reducer {
             other.transform(self.transform(state, action), action)
         }
     }
-    
+
     public func reduce(state: State, action: Action) -> State {
         transform(state, action)
     }
@@ -60,7 +52,7 @@ public struct PureReducer<State, Action>: Reducer {
 public struct MutatingReducer<State, Action>: Reducer {
     public typealias Transform = (_ state: inout State, _ action: Action) -> Void
     public let transform: Transform
-    
+
     public init() {
         self.transform = { _, _ in }
     }
@@ -68,7 +60,7 @@ public struct MutatingReducer<State, Action>: Reducer {
     public init(_ transform: @escaping Transform) {
         self.transform = transform
     }
-    
+
     public func callAsFunction(state: inout State, action: Action) {
         transform(&state, action)
     }
@@ -79,7 +71,7 @@ public struct MutatingReducer<State, Action>: Reducer {
             other.transform(&state, action)
         }
     }
-    
+
     public func reduce(state: State, action: Action) -> State {
         var s = state
         transform(&s, action)

@@ -1,11 +1,3 @@
-//
-//  Store.swift
-//  Recombine
-//
-//  Created by Charlotte Tortorella on 2019-07-13.
-//  Copyright © 2019 Charlotte Tortorella. All rights reserved.
-//
-
 import Combine
 
 public class Store<State, RawAction, RefinedAction>: ObservableObject {
@@ -13,6 +5,15 @@ public class Store<State, RawAction, RefinedAction>: ObservableObject {
     public private(set) var state: State
     public let rawActions = PassthroughSubject<RawAction, Never>()
     public let refinedActions = PassthroughSubject<RefinedAction, Never>()
+    public var actions: Publishers.Merge<
+        Publishers.Map<PassthroughSubject<RawAction, Never>, ActionStrata>,
+        Publishers.Map<PassthroughSubject<RefinedAction, Never>, ActionStrata>
+    > {
+        .init(
+            rawActions.map(ActionStrata.raw),
+            refinedActions.map(ActionStrata.refined)
+        )
+    }
     private var cancellables = Set<AnyCancellable>()
 
     public required init<S: Scheduler, R: Reducer>(
@@ -24,11 +25,11 @@ public class Store<State, RawAction, RefinedAction>: ObservableObject {
         self.state = state
 
         rawActions.flatMap { [unowned self] action in
-            middleware.transform(self.$state.prefix(1), action)
+            middleware.transform($state.first(), action)
         }
         .subscribe(refinedActions)
         .store(in: &cancellables)
-        
+
         refinedActions.scan(state) { state, action in
             reducer.reduce(
                 state: state,
@@ -69,7 +70,7 @@ extension Store: Subscriber {
         subscription.request(.unlimited)
     }
 
-    public func receive(_ input: ActionStrata<RawAction, RefinedAction>) -> Subscribers.Demand {
+    public func receive(_ input: ActionStrata) -> Subscribers.Demand {
         switch input {
         case let .raw(action):
             rawActions.send(action)
@@ -83,13 +84,14 @@ extension Store: Subscriber {
 }
 
 public class StoreTransform<Underlying, State, RawAction, RefinedAction>: ObservableObject {
+    public typealias StoreType = Store<Underlying, RawAction, RefinedAction>
     @Published
     public private(set) var state: State
-    private let store: Store<Underlying, RawAction, RefinedAction>
+    private let store: StoreType
     private let keyPath: KeyPath<Underlying, State>
     private var cancellables = Set<AnyCancellable>()
 
-    public required init(store: Store<Underlying, RawAction, RefinedAction>, lensing keyPath: KeyPath<Underlying, State>) {
+    public required init(store: StoreType, lensing keyPath: KeyPath<Underlying, State>) {
         self.store = store
         self.keyPath = keyPath
         state = store.state[keyPath: keyPath]
@@ -128,7 +130,7 @@ extension StoreTransform: Subscriber {
         subscription.request(.unlimited)
     }
 
-    public func receive(_ input: ActionStrata<RawAction, RefinedAction>) -> Subscribers.Demand {
+    public func receive(_ input: StoreType.ActionStrata) -> Subscribers.Demand {
         switch input {
         case let .raw(action):
             store.dispatch(raw: action)

@@ -1,11 +1,3 @@
-//
-//  ObservableStoreTests.swift
-//  Recombine
-//
-//  Created by Charlotte Tortorella on 2019-07-13.
-//  Copyright © 2019 DigiTales. All rights reserved.
-//
-
 import XCTest
 @testable import Recombine
 import Combine

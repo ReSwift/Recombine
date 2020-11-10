@@ -1,11 +1,3 @@
-//
-//  TestFakes.swift
-//  Recombine
-//
-//  Created by Benji Encz on 12/24/15.
-//  Copyright © 2019 Charlotte Tortorella. All rights reserved.
-//
-
 import Foundation
 import Recombine
 

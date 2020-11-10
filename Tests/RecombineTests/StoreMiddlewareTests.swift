@@ -1,11 +1,3 @@
-//
-//  ObservableStoreMiddlewareTests.swift
-//  Recombine
-//
-//  Created by Charlotte Tortorella on 2019-07-13.
-//  Copyright © 2019 Charlotte Tortorella. All rights reserved.
-//
-
 import XCTest
 import Foundation
 import Combine
@@ -30,55 +22,12 @@ class StoreMiddlewareTests: XCTestCase {
     }
 
     /**
-     it middleware should not be executed if the previous middleware returned nil
-     */
-    func testMiddlewareSkipsReducersWhenPassedNil() {
-        let filteringMiddleware1 = Middleware<TestStringAppState, SetAction, SetAction>()
-            .filter { _, _ in false }
-            .map { _, _ -> Empty<SetAction, Never> in
-                XCTFail()
-                return Empty()
-            }
-        let filteringMiddleware2 = Middleware<TestStringAppState, SetAction, SetAction>()
-            .filter { _, _ in false }
-            .map { _, _ -> Empty<SetAction, Never> in
-                XCTFail()
-                return Empty()
-            }
-
-        let state = TestStringAppState(testValue: "OK")
-
-        var store = Store(
-            state: state,
-            reducer: testValueStringReducer,
-            middleware: filteringMiddleware1.concat(filteringMiddleware2),
-            publishOn: ImmediateScheduler.shared
-        )
-        store.dispatch(raw: .string("Action That Won't Go Through"))
-
-        store = Store(
-            state: state,
-            reducer: testValueStringReducer,
-            middleware: filteringMiddleware1,
-            publishOn: ImmediateScheduler.shared
-        )
-        store.dispatch(raw: .string("Action That Won't Go Through"))
-
-        store = Store(
-            state: state,
-            reducer: testValueStringReducer,
-            middleware: filteringMiddleware2,
-            publishOn: ImmediateScheduler.shared
-        )
-        store.dispatch(raw: .string("Action That Won't Go Through"))
-    }
-
-    /**
      it actions should be multiplied via the increase function
      */
     func testMiddlewareMultiplies() {
-        let multiplexingMiddleware = Middleware<CounterState, SetAction, SetAction>()
-            .map { [$1, $1, $1].publisher }
+        let multiplexingMiddleware = Middleware<CounterState, SetAction, SetAction> {
+            [$1, $1, $1].publisher
+        }
         let store = Store(
             state: CounterState(count: 0),
             reducer: increaseByOneReducer,

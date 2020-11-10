@@ -85,15 +85,18 @@ Here we can do asynchronous operations like network requests and aggregate opera
 
 ```swift
 extension Redux {
-    static let middleware: Middleware<State, Action.Raw, Action.Refined> = Middleware.map { state, action -> AnyPublisher<Action.Refined, Never> in
+    static let middleware: Middleware<State, Action.Raw, Action.Refined> = Middleware { state, action -> AnyPublisher<Action.Refined, Never> in
         switch action {
         case let .networkCall(url):
             return URLSession.shared
                 .dataTaskPublisher(for: url)
-                .zip(state.setFailureType(to: URLError.self))
-                .map { Action.Refined.modify(.set($1.counter + $0.data.count)) }
+                .flatMap { data, _ in
+                    state.map {
+                        .modify(.set($0.counter + data.count))
+                    }
+                }
                 .catch { error in
-                    Just(Action.Refined.setText(error.localizedDescription))
+                    Just(.setText(error.localizedDescription))
                 }
                 .eraseToAnyPublisher()
         case .reset:
@@ -131,7 +134,36 @@ ContentView()
 Now it can be accessed from any of our views!
 
 ```swift
-@EnvironmentObject var store: Store<Redux.State, Redux.Action.Raw, Redux.Action.Refined>
+struct ContentView: View {
+    @EnvironmentObject var store: Store<Redux.State, Redux.Action.Raw, Redux.Action.Refined>
+    
+    var body: some View {
+        VStack {
+            if let text = store.state.text {
+                Text("Error: \(text)")
+            }
+            Text("\(store.state.counter)")
+            HStack {
+                Button(action: {
+                    store.dispatch(refined: .modify(.decrease))
+                }, label: {
+                    Image(systemName: "minus.circle")
+                })
+                Button(action: {
+                    store.dispatch(refined: .modify(.increase))
+                }, label: {
+                    Image(systemName: "plus.circle")
+                })
+            }
+            Button("Network request") {
+                store.dispatch(raw: .networkCall(URL(string: "https://www.google.com")!))
+            }
+            Button("Reset") {
+                store.dispatch(raw: .reset)
+            }
+        }
+    }
+}
 ```
 
 # Credits
