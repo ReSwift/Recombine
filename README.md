@@ -174,12 +174,6 @@ struct ContentView: View {
 
 # Example Projects
 
-[Recombine-Example: A counter example app that showcases networking and action recording/replay](https://github.com/ReSwift/Recombine-Example)
+[Recombine-Example](https://github.com/ReSwift/Recombine-Example): A counter example app that showcases networking, action recording/replay, state rewind and serialising actions via `Codable`.
 
 [Magnetar](https://github.com/Qata/Magnetar)
-
-# Get in touch
-
-If you have any questions, you can find the core team on twitter:
-
-- [@chartortorella](https://twitter.com/chartortorella)
