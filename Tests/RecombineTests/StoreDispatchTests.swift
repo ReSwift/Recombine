@@ -18,7 +18,7 @@ class ObservableStoreDispatchTests: XCTestCase {
      it subscribes to the property we pass in and dispatches any new values
      */
     func testLiftingWorksAsExpected() {
-        let subject = PassthroughSubject<StoreTestType.ActionStrata, Never>()
+        let subject = PassthroughSubject<StoreTestType.Action, Never>()
         store = Store(state: TestAppState(), reducer: reducer, middleware: .init(), publishOn: ImmediateScheduler.shared)
         subject.subscribe(store)
         subject.send(.refined(.int(20)))
