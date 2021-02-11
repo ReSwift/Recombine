@@ -1,13 +1,15 @@
 # Recombine
 
-Recombine is a [Redux](https://github.com/reactjs/redux)-like implementation of the unidirectional data flow architecture in Swift.
+Recombine is a deeply opinionated [Redux](https://github.com/reactjs/redux)-like implementation of the unidirectional data flow architecture in Swift.
 
 This project could be considered a tightened and Combine-specific sequel to [ReactiveReSwift](https://github.com/ReSwift/ReactiveReSwift).
 
 # Why Recombine?
 
 Ever since I started writing Elm in 2012 at the impressionable age of eighteen, I've always seen its Model-View-Update architecture as the pinnacle of user interface development, and I've wanted for a very long time to make something faithful to Elm's design philosophy. SwiftUI now allows us that same power, if only we use the right tools to take advantage of it.
+
 Recombine makes so many facets of application development easy, for the up front cost of your UI reflecting a central state model.
+
 At the time of writing this document, Swift does not yet have default `Codable` implementations for enums with associated types. There is currently a proposal in the pipeline, but you can already get all the benefits listed below by using [Sourcery's](https://github.com/krzysztofzablocki/Sourcery) [`AutoCodable` template](https://github.com/krzysztofzablocki/Sourcery/blob/master/Templates/Tests/Context/AutoCodable.swift).
 A non-comprehensive list of benefits:
 - **Type-safe**: Recombine uses concrete types, not protocols, for its actions. If you're using enums for your actions (and you should), switch cases will alert you to all of the locations that need updating whenever you make changes to your implementation.
