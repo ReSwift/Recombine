@@ -51,7 +51,7 @@ public class BaseStore<State, RawAction, RefinedAction>: StoreProtocol {
         .store(in: &cancellables)
     }
     
-    convenience init<S: Scheduler, R: Reducer>(
+    public convenience init<S: Scheduler, R: Reducer>(
         state: State,
         reducer: R,
         middleware: Middleware<State, RawAction, RefinedAction>,
