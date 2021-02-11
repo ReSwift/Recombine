@@ -1,8 +1,9 @@
 import Combine
 
-public class AnyStore<BaseState, SubState, RawAction, RefinedAction>: StoreProtocol {
-    public let underlying: Store<BaseState, RawAction, RefinedAction>
+public class AnyStore<BaseState, SubState, RawAction, BaseRefinedAction, SubRefinedAction>: StoreProtocol {
+    public let underlying: BaseStore<BaseState, RawAction, BaseRefinedAction>
     public let keyPath: KeyPath<BaseState, SubState>
+    public let actionPromotion: (SubRefinedAction) -> BaseRefinedAction
     private var cancellables = Set<AnyCancellable>()
     @Published
     public private(set) var state: SubState
@@ -12,10 +13,12 @@ public class AnyStore<BaseState, SubState, RawAction, RefinedAction>: StoreProto
     where Store.BaseState == BaseState,
           Store.SubState == SubState,
           Store.RawAction == RawAction,
-          Store.RefinedAction == RefinedAction
+          Store.BaseRefinedAction == BaseRefinedAction,
+          Store.SubRefinedAction == SubRefinedAction
     {
         underlying = store.underlying
         keyPath = store.keyPath
+        actionPromotion = store.actionPromotion
         self.state = store.state
         store.statePublisher.sink { [unowned self] state in
             self.state = state
@@ -23,12 +26,25 @@ public class AnyStore<BaseState, SubState, RawAction, RefinedAction>: StoreProto
         .store(in: &cancellables)
     }
 
-    public func lensing<NewState>(_ keyPath: KeyPath<SubState, NewState>) -> StoreTransform<BaseState, NewState, RawAction, RefinedAction> {
-        .init(store: underlying, lensing: self.keyPath.appending(path: keyPath))
+    public func lensing<NewState, NewAction>(
+        state keyPath: KeyPath<SubState, NewState>,
+        actions transform: @escaping (NewAction) -> SubRefinedAction
+    ) -> LensedStore<
+        BaseState,
+        NewState,
+        RawAction,
+        BaseRefinedAction,
+        NewAction
+    > {
+        .init(
+            store: underlying,
+            lensing: self.keyPath.appending(path: keyPath),
+            actionPromotion: { self.actionPromotion(transform($0)) }
+        )
     }
 
-    public func dispatch<S: Sequence>(refined actions: S) where S.Element == RefinedAction {
-        underlying.dispatch(refined: actions)
+    public func dispatch<S: Sequence>(refined actions: S) where S.Element == SubRefinedAction {
+        underlying.dispatch(refined: actions.map(actionPromotion))
     }
 
     public func dispatch<S: Sequence>(raw actions: S) where S.Element == RawAction {

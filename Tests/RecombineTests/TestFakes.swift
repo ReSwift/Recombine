@@ -2,48 +2,80 @@ import Foundation
 import Recombine
 
 let dispatchQueue = DispatchQueue.global()
+typealias MainStore = BaseStore<TestFakes.NestedTest.State, TestFakes.NestedTest.Action, TestFakes.NestedTest.Action>
+typealias SubStore<State: Equatable, Action> = LensedStore<TestFakes.NestedTest.State, State, TestFakes.NestedTest.Action, TestFakes.NestedTest.Action, Action>
 
-struct CounterState {
-    var count: Int = 0
-}
-
-struct TestAppState {
-    var testValue: Int?
-}
-
-struct TestStringAppState {
-    var testValue: String?
-}
-
-enum SetAction: Equatable {
-    case noop
-    case int(Int)
-    case string(String)
-}
-
-let testReducer: MutatingReducer<TestAppState, SetAction> = .init { state, action in
-    switch action {
-    case let .int(value):
-        state.testValue = value
-    default:
-        break
+enum TestFakes {
+    enum SetAction: Equatable {
+        case noop
+        case int(Int)
+        case string(String)
     }
 }
 
-let testValueStringReducer: MutatingReducer<TestStringAppState, SetAction> = .init { state, action in
-    switch action {
-    case let .string(value):
-        state.testValue = value
-    default:
-        break
+extension TestFakes {
+    enum CounterTest {
+        struct State: Equatable {
+            var count = 0
+        }
     }
 }
 
-class TestStoreSubscriber<T> {
-    var receivedStates: [T] = []
-    var subscription: ((T) -> Void)!
+extension TestFakes {
+    enum NestedTest {
+        enum Action: Equatable {
+            enum SubState: Equatable {
+                case set(String)
+            }
+            case sub(SubState)
+        }
 
-    init() {
-        subscription = { self.receivedStates.append($0) }
+        struct State: Equatable {
+            struct SubState: Equatable {
+                var value: String = ""
+            }
+            var subState: SubState = .init()
+        }
+
+        static let reducer: MutatingReducer<State, Action> = .init { state, action in
+            switch action {
+            case let .sub(.set(value)):
+                state.subState.value = value
+            }
+        }
+    }
+}
+
+extension TestFakes {
+    enum StringTest {
+        struct State: Equatable {
+            var value: String?
+        }
+        
+        static let reducer = MutatingReducer<State, SetAction> { state, action in
+            switch action {
+            case let .string(value):
+                state.value = value
+            default:
+                break
+            }
+        }
+    }
+}
+
+extension TestFakes {
+    enum IntTest {
+        struct State: Equatable {
+            var value: Int?
+        }
+        
+        static let reducer = MutatingReducer<State, SetAction> { state, action in
+            switch action {
+            case let .int(value):
+                state.value = value
+            default:
+                break
+            }
+        }
     }
 }

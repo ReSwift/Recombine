@@ -4,19 +4,54 @@ public protocol StoreProtocol: ObservableObject, Subscriber {
     associatedtype BaseState
     associatedtype SubState
     associatedtype RawAction
-    associatedtype RefinedAction
+    associatedtype BaseRefinedAction
+    associatedtype SubRefinedAction
     var state: SubState { get }
     var statePublisher: Published<SubState>.Publisher { get }
-    var underlying: Store<BaseState, RawAction, RefinedAction> { get }
+    var underlying: BaseStore<BaseState, RawAction, BaseRefinedAction> { get }
     var keyPath: KeyPath<BaseState, SubState> { get }
+    var actionPromotion: (SubRefinedAction) -> BaseRefinedAction { get }
     func dispatch<S: Sequence>(raw: S) where S.Element == RawAction
-    func dispatch<S: Sequence>(refined: S) where S.Element == RefinedAction
-    func lensing<NewState>(_ keyPath: KeyPath<SubState, NewState>) -> StoreTransform<BaseState, NewState, RawAction, RefinedAction>
-    func eraseToAnyStore() -> AnyStore<BaseState, SubState, RawAction, RefinedAction>
+    func dispatch<S: Sequence>(refined: S) where S.Element == SubRefinedAction
+    func lensing<NewState, NewAction>(
+        state keyPath: KeyPath<SubState, NewState>,
+        actions transform: @escaping (NewAction) -> SubRefinedAction
+    ) -> LensedStore<
+        BaseState,
+        NewState,
+        RawAction,
+        BaseRefinedAction,
+        NewAction
+    >
+    func eraseToAnyStore() -> AnyStore<BaseState, SubState, RawAction, BaseRefinedAction, SubRefinedAction>
 }
 
 public extension StoreProtocol {
-    func dispatch(refined actions: RefinedAction...) {
+    func lensing<NewState, NewAction>(
+        actions transform: @escaping (NewAction) -> SubRefinedAction
+    ) -> LensedStore<
+        BaseState,
+        NewState,
+        RawAction,
+        BaseRefinedAction,
+        NewAction
+    > where NewState == SubState {
+        lensing(state: \.self, actions: transform)
+    }
+
+    func lensing<NewState, NewAction>(
+        state keyPath: KeyPath<SubState, NewState>
+    ) -> LensedStore<
+        BaseState,
+        NewState,
+        RawAction,
+        BaseRefinedAction,
+        NewAction
+    > where NewAction == SubRefinedAction {
+        lensing(state: keyPath, actions: { $0 })
+    }
+
+    func dispatch(refined actions: SubRefinedAction...) {
         dispatch(refined: actions)
     }
 
@@ -24,7 +59,7 @@ public extension StoreProtocol {
         dispatch(raw: actions)
     }
 
-    func eraseToAnyStore() -> AnyStore<BaseState, SubState, RawAction, RefinedAction> {
+    func eraseToAnyStore() -> AnyStore<BaseState, SubState, RawAction, BaseRefinedAction, SubRefinedAction> {
         AnyStore(self)
     }
 }
@@ -34,7 +69,7 @@ extension StoreProtocol {
         subscription.request(.unlimited)
     }
 
-    public func receive(_ input: ActionStrata<RawAction, RefinedAction>) -> Subscribers.Demand {
+    public func receive(_ input: ActionStrata<RawAction, SubRefinedAction>) -> Subscribers.Demand {
         switch input {
         case let .raw(action):
             dispatch(raw: action)

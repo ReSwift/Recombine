@@ -28,7 +28,7 @@ enum Redux {
 You would also define your actions. For the simple actions in this example we can use a very basic enum:
 
 ```swift
-// It's recommended that you use enums for your actions to ensure a well typed implementation.
+// Use enums for your actions to ensure a well typed implementation.
 extension Redux {
     enum Action {
         enum Refined {

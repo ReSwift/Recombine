@@ -1,9 +1,9 @@
 import XCTest
 @testable import Recombine
 import Combine
+import CombineExpectations
 
-class ObservableStoreTests: XCTestCase {
-
+class StoreTests: XCTestCase {
     /**
      it deinitializes when no reference is held
      */
@@ -12,20 +12,41 @@ class ObservableStoreTests: XCTestCase {
 
         autoreleasepool {
             let store = DeInitStore(
-                state: TestAppState(),
-                reducer: testReducer,
+                state: TestFakes.IntTest.State(),
+                reducer: TestFakes.IntTest.reducer,
                 deInitAction: { deInitCount += 1 }
             )
             Just(.refined(.int(100))).subscribe(store)
-            XCTAssertEqual(store.state.testValue, 100)
+            XCTAssertEqual(store.state.value, 100)
         }
 
         XCTAssertEqual(deInitCount, 1)
     }
+    
+    func testLensing() throws {
+        let store = BaseStore(
+            state: TestFakes.NestedTest.State(),
+            reducer: TestFakes.NestedTest.reducer,
+            middleware: .init(),
+            publishOn: ImmediateScheduler.shared
+        )
+        let subStore = store.lensing(state: \.subState.value, actions: TestFakes.NestedTest.Action.sub)
+        let stateRecorder = subStore.$state.dropFirst().record()
+        let actionsRecorder = subStore.actions.record()
+
+        let string = "Oh Yeah!"
+
+        subStore.dispatch(refined: .set(string))
+
+        let state = try wait(for: stateRecorder.prefix(1), timeout: 1)
+        XCTAssertEqual(state[0], string)
+        let actions = try wait(for: actionsRecorder.prefix(1), timeout: 1)
+        XCTAssertEqual(actions, [.set(string)])
+    }
 }
 
 // Used for deinitialization test
-class DeInitStore<State>: Store<State, SetAction, SetAction> {
+class DeInitStore<State: Equatable>: BaseStore<State, TestFakes.SetAction, TestFakes.SetAction> {
     var deInitAction: (() -> Void)?
 
     deinit {
@@ -34,8 +55,8 @@ class DeInitStore<State>: Store<State, SetAction, SetAction> {
 
     convenience init(
         state: State,
-        reducer: MutatingReducer<State, SetAction>,
-        middleware: Middleware<State, SetAction, SetAction> = .init(),
+        reducer: MutatingReducer<State, TestFakes.SetAction>,
+        middleware: Middleware<State, TestFakes.SetAction, TestFakes.SetAction> = .init(),
         deInitAction: @escaping () -> Void
     ) {
         self.init(
@@ -49,12 +70,14 @@ class DeInitStore<State>: Store<State, SetAction, SetAction> {
 
     required init<S, R>(
         state: State,
+        stateEquality: @escaping (State, State) -> Bool,
         reducer: R,
-        middleware: Middleware<State, SetAction, SetAction> = .init(),
+        middleware: Middleware<State, TestFakes.SetAction, TestFakes.SetAction> = .init(),
         publishOn scheduler: S
-    ) where State == R.State, SetAction == R.Action, S : Scheduler, R : Reducer {
+    ) where State == R.State, TestFakes.SetAction == R.Action, S : Scheduler, R : Reducer {
         super.init(
             state: state,
+            stateEquality: stateEquality,
             reducer: reducer,
             middleware: middleware,
             publishOn: scheduler

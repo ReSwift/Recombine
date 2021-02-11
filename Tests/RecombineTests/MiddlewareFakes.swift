@@ -1,7 +1,7 @@
 import Recombine
 import Combine
 
-let firstMiddleware = Middleware<TestStringAppState, SetAction, SetAction> { state, action -> Just<SetAction> in
+let firstMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction, TestFakes.SetAction> { state, action -> Just<TestFakes.SetAction> in
     switch action {
     case let .string(value):
         return Just(.string(value + " First Middleware"))
@@ -10,7 +10,7 @@ let firstMiddleware = Middleware<TestStringAppState, SetAction, SetAction> { sta
     }
 }
 
-let secondMiddleware = Middleware<TestStringAppState, SetAction, SetAction> { state, action -> Just<SetAction> in
+let secondMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction, TestFakes.SetAction> { state, action -> Just<TestFakes.SetAction> in
     switch action {
     case let .string(value):
         return Just(.string(value + " Second Middleware"))
@@ -19,10 +19,10 @@ let secondMiddleware = Middleware<TestStringAppState, SetAction, SetAction> { st
     }
 }
 
-let stateAccessingMiddleware = Middleware<TestStringAppState, SetAction, SetAction> { state, action -> AnyPublisher<SetAction, Never> in
+let stateAccessingMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction, TestFakes.SetAction> { state, action -> AnyPublisher<TestFakes.SetAction, Never> in
     if case let .string(value) = action {
         return state.map {
-            .string($0.testValue! + $0.testValue!)
+            .string($0.value! + $0.value!)
         }
         .eraseToAnyPublisher()
     }

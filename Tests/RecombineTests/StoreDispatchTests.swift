@@ -2,16 +2,16 @@ import XCTest
 @testable import Recombine
 import Combine
 
-fileprivate typealias StoreTestType = Store<TestAppState, SetAction, SetAction>
+fileprivate typealias StoreTestType = BaseStore<TestFakes.IntTest.State, TestFakes.SetAction, TestFakes.SetAction>
 
 class ObservableStoreDispatchTests: XCTestCase {
 
     fileprivate var store: StoreTestType!
-    var reducer: MutatingReducer<TestAppState, SetAction>!
+    var reducer: MutatingReducer<TestFakes.IntTest.State, TestFakes.SetAction>!
 
     override func setUp() {
         super.setUp()
-        reducer = testReducer
+        reducer = TestFakes.IntTest.reducer
     }
 
     /**
@@ -19,9 +19,9 @@ class ObservableStoreDispatchTests: XCTestCase {
      */
     func testLiftingWorksAsExpected() {
         let subject = PassthroughSubject<StoreTestType.Action, Never>()
-        store = Store(state: TestAppState(), reducer: reducer, middleware: .init(), publishOn: ImmediateScheduler.shared)
+        store = BaseStore(state: TestFakes.IntTest.State(), reducer: reducer, middleware: .init(), publishOn: ImmediateScheduler.shared)
         subject.subscribe(store)
         subject.send(.refined(.int(20)))
-        XCTAssertEqual(store.state.testValue, 20)
+        XCTAssertEqual(store.state.value, 20)
     }
 }

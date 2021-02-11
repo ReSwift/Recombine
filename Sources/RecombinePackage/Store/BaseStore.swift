@@ -1,35 +1,37 @@
 import Combine
 
-public class Store<State, RawAction, RefinedAction>: StoreProtocol {
+public class BaseStore<State, RawAction, RefinedAction>: StoreProtocol {
     public typealias SubState = State
     public typealias SubRefinedAction = RefinedAction
     public typealias Action = ActionStrata<RawAction, RefinedAction>
     @Published
     public private(set) var state: State
     public var statePublisher: Published<State>.Publisher { $state }
-    public var underlying: Store<State, RawAction, RefinedAction> { self }
+    public var underlying: BaseStore<State, RawAction, RefinedAction> { self }
     public let keyPath: KeyPath<State, State> = \.self
     public let rawActions = PassthroughSubject<RawAction, Never>()
     public let refinedActions = PassthroughSubject<RefinedAction, Never>()
-    public var actions: Publishers.Merge<
-        Publishers.Map<PassthroughSubject<RawAction, Never>, Action>,
-        Publishers.Map<PassthroughSubject<RefinedAction, Never>, Action>
-    > {
-        .init(
+    public let actionPromotion: (RefinedAction) -> RefinedAction = { $0 }
+    public var actions: AnyPublisher<Action, Never> {
+        Publishers.Merge(
             rawActions.map(Action.raw),
             refinedActions.map(Action.refined)
         )
+        .eraseToAnyPublisher()
     }
+    private let stateEquality: (State, State) -> Bool
     private var cancellables = Set<AnyCancellable>()
 
     public required init<S: Scheduler, R: Reducer>(
         state: State,
+        stateEquality: @escaping (State, State) -> Bool,
         reducer: R,
         middleware: Middleware<State, RawAction, RefinedAction>,
         publishOn scheduler: S
     ) where R.State == State, R.Action == RefinedAction {
         self.state = state
-
+        self.stateEquality = stateEquality
+        
         rawActions.flatMap { [unowned self] action in
             middleware.transform($state.first(), action)
         }
@@ -48,9 +50,33 @@ public class Store<State, RawAction, RefinedAction>: StoreProtocol {
         }
         .store(in: &cancellables)
     }
+    
+    convenience init<S: Scheduler, R: Reducer>(
+        state: State,
+        reducer: R,
+        middleware: Middleware<State, RawAction, RefinedAction>,
+        publishOn scheduler: S
+    ) where R.State == State, R.Action == RefinedAction, State: Equatable {
+        self.init(
+            state: state,
+            stateEquality: ==,
+            reducer: reducer,
+            middleware: middleware,
+            publishOn: scheduler
+        )
+    }
 
-    public func lensing<NewState>(_ keyPath: KeyPath<SubState, NewState>) -> StoreTransform<State, NewState, RawAction, RefinedAction> {
-        .init(store: self, lensing: keyPath)
+    public func lensing<NewState, NewAction>(
+        state keyPath: KeyPath<SubState, NewState>,
+        actions transform: @escaping (NewAction) -> SubRefinedAction
+    ) -> LensedStore<
+        State,
+        NewState,
+        RawAction,
+        RefinedAction,
+        NewAction
+    > {
+        .init(store: self, lensing: keyPath, actionPromotion: transform)
     }
 
     open func dispatch<S: Sequence>(refined actions: S) where S.Element == RefinedAction {
