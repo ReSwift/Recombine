@@ -30,7 +30,10 @@ class StoreTests: XCTestCase {
             middleware: .init(),
             publishOn: ImmediateScheduler.shared
         )
-        let subStore = store.lensing(state: \.subState.value, actions: TestFakes.NestedTest.Action.sub)
+        let subStore = store.lensing(
+            state: \.subState.value,
+            actions: TestFakes.NestedTest.Action.sub
+        )
         let stateRecorder = subStore.$state.dropFirst().record()
         let actionsRecorder = subStore.actions.record()
 
@@ -42,6 +45,43 @@ class StoreTests: XCTestCase {
         XCTAssertEqual(state[0], string)
         let actions = try wait(for: actionsRecorder.prefix(1), timeout: 1)
         XCTAssertEqual(actions, [.set(string)])
+    }
+
+    func testBinding() throws {
+        let store = BaseStore(
+            state: TestFakes.NestedTest.State(),
+            reducer: TestFakes.NestedTest.reducer,
+            middleware: .init(),
+            publishOn: ImmediateScheduler.shared
+        )
+        let binding1 = store.binding(
+            state: \.subState.value,
+            actions: { .sub(.set("\($0)1")) }
+        )
+        let binding2 = store.lensing(
+            state: \.subState.value
+        ).binding(
+            actions: { .sub(.set("\($0)2")) }
+        )
+        let binding3 = store.lensing(
+            state: \.subState,
+            actions: { .sub(.set("\($0)3")) }
+        ).binding(
+            state: \.value
+        )
+        let stateRecorder = store.$state.dropFirst().record()
+
+        let string = "Oh Yeah!"
+
+        binding1.wrappedValue = string
+        binding2.wrappedValue = string
+        binding3.wrappedValue = string
+
+        let state = try wait(for: stateRecorder.prefix(3), timeout: 1)
+        XCTAssertEqual(
+            state.map(\.subState.value),
+            zip(repeatElement(string, count: 3), 1...).map { "\($0)\($1)" }
+        )
     }
 }
 

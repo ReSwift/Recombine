@@ -79,17 +79,17 @@ public extension StoreProtocol {
 }
 
 public extension StoreProtocol {
-    /// Create a SwiftUI Binding from a `KeyPath` and a `SubRefinedAction`.
+    /// Create a SwiftUI Binding from a lensing function and a `SubRefinedAction`.
     /// - Parameters:
-    ///   - keyPath: A keypath to the state property.
+    ///   - lens: A lens to the state property.
     ///   - action: The refined action which will be called when the value is changed.
     /// - Returns: A `Binding` whose getter is the property and whose setter dispatches the refined action.
     func binding<Value>(
-        state keyPath: KeyPath<SubState, Value>,
+        state lens: @escaping (SubState) -> Value,
         actions transform: @escaping (Value) -> SubRefinedAction
     ) -> Binding<Value> {
         .init(
-            get: { self.state[keyPath: keyPath] },
+            get: { lens(self.state) },
             set: { self.dispatch(refined: transform($0)) }
         )
     }
@@ -107,15 +107,15 @@ public extension StoreProtocol {
         )
     }
 
-    /// Create a SwiftUI Binding from a `KeyPath` when the value of that path is equivalent to `SubRefinedAction`.
+    /// Create a SwiftUI Binding from a lensing function when the value of that function is equivalent to `SubRefinedAction`.
     /// - Parameters:
-    ///   - keyPath: A keypath to the state property.
+    ///   - lens: A lens to the state property.
     /// - Returns: A `Binding` whose getter is the property and whose setter dispatches the store's refined action.
     func binding<Value>(
-        state keyPath: KeyPath<SubState, Value>
+        state lens: @escaping (SubState) -> Value
     ) -> Binding<Value> where SubRefinedAction == Value {
         .init(
-            get: { self.state[keyPath: keyPath] },
+            get: { lens(self.state) },
             set: { self.dispatch(refined: $0) }
         )
     }

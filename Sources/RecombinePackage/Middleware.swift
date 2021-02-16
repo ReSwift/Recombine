@@ -9,7 +9,7 @@ public struct Middleware<State, Input, Output> {
     public typealias Transform<Result> = (StatePublisher, Output) -> Result
     internal let transform: Function
 
-    /// Create a blank slate Middleware.
+    /// Create a passthrough Middleware.
     public init() where Input == Output {
         self.transform = { Just($1).eraseToAnyPublisher() }
     }
