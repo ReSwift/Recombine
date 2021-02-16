@@ -1,14 +1,15 @@
 import Combine
 
-/// Middleware is a structure that allows you to modify, filter out and create more
-/// actions, before the action being handled reaches the store.
+/// Middleware is a dependency injection structure that allows you to transform raw actions into refined ones,
+/// Refined actions produced by Middleware are then forwarded to the main reducer.
+///
 public struct Middleware<State, Input, Output> {
     public typealias StatePublisher = Publishers.First<Published<State>.Publisher>
     public typealias Function = (StatePublisher, Input) -> AnyPublisher<Output, Never>
     public typealias Transform<Result> = (StatePublisher, Output) -> Result
     internal let transform: Function
 
-    /// Create a blank slate Middleware.
+    /// Create a passthrough Middleware.
     public init() where Input == Output {
         self.transform = { Just($1).eraseToAnyPublisher() }
     }

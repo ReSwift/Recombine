@@ -6,18 +6,18 @@ public class LensedStore<BaseState, SubState: Equatable, RawAction, BaseRefinedA
     public private(set) var state: SubState
     public var statePublisher: Published<SubState>.Publisher { $state }
     public let underlying: BaseStore<BaseState, RawAction, BaseRefinedAction>
-    public let keyPath: KeyPath<BaseState, SubState>
+    public let stateLens: (BaseState) -> SubState
     public let actions = PassthroughSubject<SubRefinedAction, Never>()
     public let actionPromotion: (SubRefinedAction) -> BaseRefinedAction
     private var cancellables = Set<AnyCancellable>()
 
-    public required init(store: StoreType, lensing keyPath: KeyPath<BaseState, SubState>, actionPromotion: @escaping (SubRefinedAction) -> BaseRefinedAction) {
+    public required init(store: StoreType, lensing lens: @escaping (BaseState) -> SubState, actionPromotion: @escaping (SubRefinedAction) -> BaseRefinedAction) {
         self.underlying = store
-        self.keyPath = keyPath
+        self.stateLens = lens
         self.actionPromotion = actionPromotion
-        state = store.state[keyPath: keyPath]
+        state = lens(store.state)
         store.$state
-            .map { $0[keyPath: keyPath] }
+            .map(lens)
             .removeDuplicates()
             .sink { [unowned self] state in
                 self.state = state
@@ -31,7 +31,7 @@ public class LensedStore<BaseState, SubState: Equatable, RawAction, BaseRefinedA
     }
 
     public func lensing<NewState, NewAction>(
-        state keyPath: KeyPath<SubState, NewState>,
+        state lens: @escaping (SubState) -> NewState,
         actions transform: @escaping (NewAction) -> SubRefinedAction
     ) -> LensedStore<
         BaseState,
@@ -40,9 +40,10 @@ public class LensedStore<BaseState, SubState: Equatable, RawAction, BaseRefinedA
         BaseRefinedAction,
         NewAction
     > {
-        .init(
+        let stateLens = self.stateLens
+        return .init(
             store: underlying,
-            lensing: self.keyPath.appending(path: keyPath),
+            lensing: { lens(stateLens($0)) },
             actionPromotion: { self.actionPromotion(transform($0)) }
         )
     }
@@ -56,8 +57,8 @@ public class LensedStore<BaseState, SubState: Equatable, RawAction, BaseRefinedA
     }
 }
 
-extension LensedStore where BaseRefinedAction == SubRefinedAction {
-    convenience init(store: StoreType, lensing keyPath: KeyPath<BaseState, SubState>) {
-        self.init(store: store, lensing: keyPath, actionPromotion: { $0 })
+public extension LensedStore where BaseRefinedAction == SubRefinedAction {
+    convenience init(store: StoreType, lensing lens: @escaping (BaseState) -> SubState) {
+        self.init(store: store, lensing: lens, actionPromotion: { $0 })
     }
 }
