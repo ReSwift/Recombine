@@ -8,7 +8,7 @@ public class BaseStore<State, RawAction, RefinedAction>: StoreProtocol {
     public private(set) var state: State
     public var statePublisher: Published<State>.Publisher { $state }
     public var underlying: BaseStore<State, RawAction, RefinedAction> { self }
-    public let keyPath: KeyPath<State, State> = \.self
+    public let stateLens: (State) -> State = { $0 }
     public let rawActions = PassthroughSubject<RawAction, Never>()
     public let refinedActions = PassthroughSubject<RefinedAction, Never>()
     public let actionPromotion: (RefinedAction) -> RefinedAction = { $0 }
@@ -44,6 +44,7 @@ public class BaseStore<State, RawAction, RefinedAction>: StoreProtocol {
                 action: action
             )
         }
+        .removeDuplicates(by: stateEquality)
         .receive(on: scheduler)
         .sink { [unowned self] state in
             self.state = state
@@ -67,7 +68,7 @@ public class BaseStore<State, RawAction, RefinedAction>: StoreProtocol {
     }
 
     public func lensing<NewState, NewAction>(
-        state keyPath: KeyPath<SubState, NewState>,
+        state lens: @escaping (SubState) -> NewState,
         actions transform: @escaping (NewAction) -> SubRefinedAction
     ) -> LensedStore<
         State,
@@ -76,7 +77,7 @@ public class BaseStore<State, RawAction, RefinedAction>: StoreProtocol {
         RefinedAction,
         NewAction
     > {
-        .init(store: self, lensing: keyPath, actionPromotion: transform)
+        .init(store: self, lensing: lens, actionPromotion: transform)
     }
 
     open func dispatch<S: Sequence>(refined actions: S) where S.Element == RefinedAction {

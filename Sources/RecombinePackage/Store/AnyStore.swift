@@ -2,7 +2,7 @@ import Combine
 
 public class AnyStore<BaseState, SubState, RawAction, BaseRefinedAction, SubRefinedAction>: StoreProtocol {
     public let underlying: BaseStore<BaseState, RawAction, BaseRefinedAction>
-    public let keyPath: KeyPath<BaseState, SubState>
+    public let stateLens: (BaseState) -> SubState
     public let actionPromotion: (SubRefinedAction) -> BaseRefinedAction
     private var cancellables = Set<AnyCancellable>()
     @Published
@@ -17,7 +17,7 @@ public class AnyStore<BaseState, SubState, RawAction, BaseRefinedAction, SubRefi
           Store.SubRefinedAction == SubRefinedAction
     {
         underlying = store.underlying
-        keyPath = store.keyPath
+        stateLens = store.stateLens
         actionPromotion = store.actionPromotion
         self.state = store.state
         store.statePublisher.sink { [unowned self] state in
@@ -27,7 +27,7 @@ public class AnyStore<BaseState, SubState, RawAction, BaseRefinedAction, SubRefi
     }
 
     public func lensing<NewState, NewAction>(
-        state keyPath: KeyPath<SubState, NewState>,
+        state lens: @escaping (SubState) -> NewState,
         actions transform: @escaping (NewAction) -> SubRefinedAction
     ) -> LensedStore<
         BaseState,
@@ -36,9 +36,10 @@ public class AnyStore<BaseState, SubState, RawAction, BaseRefinedAction, SubRefi
         BaseRefinedAction,
         NewAction
     > {
-        .init(
+        let stateLens = self.stateLens
+        return .init(
             store: underlying,
-            lensing: self.keyPath.appending(path: keyPath),
+            lensing: { lens(stateLens($0)) },
             actionPromotion: { self.actionPromotion(transform($0)) }
         )
     }
