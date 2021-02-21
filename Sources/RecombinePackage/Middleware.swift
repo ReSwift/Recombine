@@ -45,7 +45,7 @@ import CoreBluetooth
 ///
 /// Then, we replace the `URLSession` publisher with the `statePublisher` using `flatMap(_:)`, which itself returns a refined action: `.setModel(MyModel)`.
 ///
-/// This middleware also handles an aggregate operation, resetting the app state. It simply returns an array of refined actions, which is turned into a publisher using the generic `publisher` property on the `Sequence` protocol.
+/// This middleware also handles an aggregate operation, resetting the app state. It simply returns an array of refined actions, which is turned into a publisher using the `publisher` property on the `Sequence` protocol.
 public struct Middleware<State, Input, Output> {
     public typealias StatePublisher = Publishers.First<Published<State>.Publisher>
     public typealias Transform<Result> = (StatePublisher, Output) -> Result
@@ -56,13 +56,15 @@ public struct Middleware<State, Input, Output> {
     ///
     /// The input type must be equivalent to the output type.
     ///
+    ///For example:
+    ///
     ///     static let passthroughMiddleware = Middleware<State, Action.Refined, Action.Refined>()
     public init() where Input == Output {
         self.transform = { Just($1).eraseToAnyPublisher() }
     }
 
     /// Initialises the middleware with a closure which handles transforming the raw actions and returning refined actions.
-    /// - parameter transform: The closure which takes a publisher of `State`, and the `Middleware`'s `Input`, and returns a publisher who's output is the `Middleware`'s output.
+    /// - parameter transform: The closure which takes a publisher of `State`, and the `Middleware`'s `Input`, and returns a publisher who's output is the `Middleware`'s `Output`.
     ///
     /// The `transform` closure takes two parameters:
     /// * A publisher wrapping over the state that was passed into the `Middleware`'s angle brackets.
