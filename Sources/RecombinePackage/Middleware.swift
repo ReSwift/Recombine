@@ -77,7 +77,7 @@ public struct Middleware<State, Input, Output> {
     ///         switch action {
     ///             case let findCurrentLocation(service):
     ///                 CLLocationManager.currentLocationPublisher(service: service)
-    ///                     .map(LocationModel(location: $0))
+    ///                     .map { LocationModel(location: $0) }
     ///                     .flatMap { location in
     ///                         statePublisher.map { _ in
     ///                             return .setLocation(to: location)
