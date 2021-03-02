@@ -1,6 +1,6 @@
 import Combine
 
-public class AnyStore<BaseState, SubState, RawAction, BaseRefinedAction, SubRefinedAction>: StoreProtocol {
+public class AnyStore<BaseState: Equatable, SubState: Equatable, RawAction, BaseRefinedAction, SubRefinedAction>: StoreProtocol {
     public let underlying: BaseStore<BaseState, RawAction, BaseRefinedAction>
     public let stateLens: (BaseState) -> SubState
     public let actionPromotion: (SubRefinedAction) -> BaseRefinedAction

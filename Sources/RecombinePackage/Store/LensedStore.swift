@@ -1,6 +1,6 @@
 import Combine
 
-public class LensedStore<BaseState, SubState: Equatable, RawAction, BaseRefinedAction, SubRefinedAction>: StoreProtocol {
+public class LensedStore<BaseState: Equatable, SubState: Equatable, RawAction, BaseRefinedAction, SubRefinedAction>: StoreProtocol {
     public typealias StoreType = BaseStore<BaseState, RawAction, BaseRefinedAction>
     @Published
     public private(set) var state: SubState

@@ -56,12 +56,12 @@ class StoreTests: XCTestCase {
         )
         let binding1 = store.binding(
             state: \.subState.value,
-            actions: { .sub(.set("\($0)1")) }
+            action: { .sub(.set("\($0)1")) }
         )
         let binding2 = store.lensing(
             state: \.subState.value
         ).binding(
-            actions: { .sub(.set("\($0)2")) }
+            action: { .sub(.set("\($0)2")) }
         )
         let binding3 = store.lensing(
             state: \.subState,
@@ -108,16 +108,14 @@ class DeInitStore<State: Equatable>: BaseStore<State, TestFakes.SetAction, TestF
         self.deInitAction = deInitAction
     }
 
-    required init<S, R>(
+    override init<S, R>(
         state: State,
-        stateEquality: @escaping (State, State) -> Bool,
         reducer: R,
         middleware: Middleware<State, TestFakes.SetAction, TestFakes.SetAction> = .init(),
         publishOn scheduler: S
     ) where State == R.State, TestFakes.SetAction == R.Action, S : Scheduler, R : Reducer {
         super.init(
             state: state,
-            stateEquality: stateEquality,
             reducer: reducer,
             middleware: middleware,
             publishOn: scheduler
