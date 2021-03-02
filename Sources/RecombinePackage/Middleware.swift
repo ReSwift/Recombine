@@ -11,7 +11,7 @@ public struct Middleware<State, Input, Output> {
 
     /// Create a passthrough Middleware.
     public init() where Input == Output {
-        self.transform = { Just($1).eraseToAnyPublisher() }
+        transform = { Just($1).eraseToAnyPublisher() }
     }
 
     /// Initialises the middleware with a transformative function.

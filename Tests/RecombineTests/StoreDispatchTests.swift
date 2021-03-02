@@ -1,11 +1,10 @@
-import XCTest
-@testable import Recombine
 import Combine
+@testable import Recombine
+import XCTest
 
-fileprivate typealias StoreTestType = BaseStore<TestFakes.IntTest.State, TestFakes.SetAction, TestFakes.SetAction>
+private typealias StoreTestType = BaseStore<TestFakes.IntTest.State, TestFakes.SetAction, TestFakes.SetAction>
 
 class ObservableStoreDispatchTests: XCTestCase {
-
     fileprivate var store: StoreTestType!
     var reducer: MutatingReducer<TestFakes.IntTest.State, TestFakes.SetAction>!
 

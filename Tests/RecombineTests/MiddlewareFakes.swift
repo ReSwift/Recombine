@@ -1,7 +1,7 @@
-import Recombine
 import Combine
+import Recombine
 
-let firstMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction, TestFakes.SetAction> { state, action -> Just<TestFakes.SetAction> in
+let firstMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction, TestFakes.SetAction> { _, action -> Just<TestFakes.SetAction> in
     switch action {
     case let .string(value):
         return Just(.string(value + " First Middleware"))
@@ -10,7 +10,7 @@ let firstMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction
     }
 }
 
-let secondMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction, TestFakes.SetAction> { state, action -> Just<TestFakes.SetAction> in
+let secondMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction, TestFakes.SetAction> { _, action -> Just<TestFakes.SetAction> in
     switch action {
     case let .string(value):
         return Just(.string(value + " Second Middleware"))

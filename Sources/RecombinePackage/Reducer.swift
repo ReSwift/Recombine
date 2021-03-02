@@ -10,13 +10,13 @@ public protocol Reducer {
     func concat<R: Reducer>(_ other: R) -> Self where R.Transform == Transform
 }
 
-extension Reducer {
-    public init(_ reducers: Self...) {
+public extension Reducer {
+    init(_ reducers: Self...) {
         self = .init(reducers)
     }
 
-    public init<S: Sequence>(_ reducers: S) where S.Element: Reducer, S.Element.Transform == Transform {
-        self = reducers.reduce(Self.init()) {
+    init<S: Sequence>(_ reducers: S) where S.Element: Reducer, S.Element.Transform == Transform {
+        self = reducers.reduce(Self()) {
             $0.concat($1)
         }
     }
@@ -27,7 +27,7 @@ public struct PureReducer<State, Action>: Reducer {
     public let transform: Transform
 
     public init() {
-        self.transform = { state, _ in state }
+        transform = { state, _ in state }
     }
 
     public init(_ transform: @escaping Transform) {
@@ -54,7 +54,7 @@ public struct MutatingReducer<State, Action>: Reducer {
     public let transform: Transform
 
     public init() {
-        self.transform = { _, _ in }
+        transform = { _, _ in }
     }
 
     public init(_ transform: @escaping Transform) {

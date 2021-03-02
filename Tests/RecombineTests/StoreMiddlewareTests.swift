@@ -1,7 +1,7 @@
-import XCTest
-import Foundation
 import Combine
+import Foundation
 @testable import Recombine
+import XCTest
 
 class StoreMiddlewareTests: XCTestCase {
     /**

@@ -10,16 +10,16 @@ public class AnyStore<BaseState: Equatable, SubState: Equatable, RawAction, Base
     public var statePublisher: Published<SubState>.Publisher { $state }
 
     public required init<Store: StoreProtocol>(_ store: Store)
-    where Store.BaseState == BaseState,
-          Store.SubState == SubState,
-          Store.RawAction == RawAction,
-          Store.BaseRefinedAction == BaseRefinedAction,
-          Store.SubRefinedAction == SubRefinedAction
+        where Store.BaseState == BaseState,
+        Store.SubState == SubState,
+        Store.RawAction == RawAction,
+        Store.BaseRefinedAction == BaseRefinedAction,
+        Store.SubRefinedAction == SubRefinedAction
     {
         underlying = store.underlying
         stateLens = store.stateLens
         actionPromotion = store.actionPromotion
-        self.state = store.state
+        state = store.state
         store.statePublisher.sink { [unowned self] state in
             self.state = state
         }

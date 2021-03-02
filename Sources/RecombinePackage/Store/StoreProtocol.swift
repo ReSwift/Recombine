@@ -51,7 +51,7 @@ public extension StoreProtocol {
     > {
         lensing(state: { $0 }, actions: transform)
     }
-    
+
     /// Create a LensedStore that cannot be updated with actions.
     /// - Parameters:
     ///   - lens: A lens to the state property.
@@ -150,5 +150,5 @@ public extension StoreProtocol {
         return .unlimited
     }
 
-    func receive(completion: Subscribers.Completion<Never>) {}
+    func receive(completion _: Subscribers.Completion<Never>) {}
 }

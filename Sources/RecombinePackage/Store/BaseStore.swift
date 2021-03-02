@@ -19,6 +19,7 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
         )
         .eraseToAnyPublisher()
     }
+
     private var cancellables = Set<AnyCancellable>()
 
     public init<S: Scheduler, R: Reducer>(
@@ -61,10 +62,10 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
     }
 
     open func dispatch<S: Sequence>(refined actions: S) where S.Element == RefinedAction {
-        self.refinedActions.send(.init(actions))
+        refinedActions.send(.init(actions))
     }
 
     open func dispatch<S: Sequence>(raw actions: S) where S.Element == RawAction {
-        actions.forEach(self.rawActions.send)
+        actions.forEach(rawActions.send)
     }
 }

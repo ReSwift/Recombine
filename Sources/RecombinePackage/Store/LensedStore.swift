@@ -12,8 +12,8 @@ public class LensedStore<BaseState: Equatable, SubState: Equatable, RawAction, B
     private var cancellables = Set<AnyCancellable>()
 
     public required init(store: StoreType, lensing lens: @escaping (BaseState) -> SubState, actionPromotion: @escaping (SubRefinedAction) -> BaseRefinedAction) {
-        self.underlying = store
-        self.stateLens = lens
+        underlying = store
+        stateLens = lens
         self.actionPromotion = actionPromotion
         state = lens(store.state)
         store.$state

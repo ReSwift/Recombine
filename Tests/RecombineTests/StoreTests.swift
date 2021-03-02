@@ -1,7 +1,7 @@
-import XCTest
-@testable import Recombine
 import Combine
 import CombineExpectations
+@testable import Recombine
+import XCTest
 
 class StoreTests: XCTestCase {
     /**
@@ -22,7 +22,7 @@ class StoreTests: XCTestCase {
 
         XCTAssertEqual(deInitCount, 1)
     }
-    
+
     func testLensing() throws {
         let store = BaseStore(
             state: TestFakes.NestedTest.State(),
@@ -113,7 +113,7 @@ class DeInitStore<State: Equatable>: BaseStore<State, TestFakes.SetAction, TestF
         reducer: R,
         middleware: Middleware<State, TestFakes.SetAction, TestFakes.SetAction> = .init(),
         publishOn scheduler: S
-    ) where State == R.State, TestFakes.SetAction == R.Action, S : Scheduler, R : Reducer {
+    ) where State == R.State, TestFakes.SetAction == R.Action, S: Scheduler, R: Reducer {
         super.init(
             state: state,
             reducer: reducer,
