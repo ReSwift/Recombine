@@ -53,19 +53,31 @@ public extension StoreProtocol {
     }
 
     /// Create a LensedStore that cannot be updated with actions.
-    /// - Parameters:
-    ///   - lens: A lens to the state property.
-    /// - Returns: A `LensedStore`, whose state is lensed by `keyPath` and whose actions are of type `Never`.
-    func lensingReadOnly<NewState>(
-        state lens: @escaping (SubState) -> NewState
-    ) -> LensedStore<
+    /// - Returns: A `LensedStore`, whose state cannot be updated with actions.
+    func readOnly() -> LensedStore<
         BaseState,
-        NewState,
+        SubState,
         RawAction,
         BaseRefinedAction,
         Never
     > {
-        lensing(state: lens, actions: { _ -> SubRefinedAction in })
+        lensing(actions: { _ -> SubRefinedAction in })
+    }
+
+    /// A lens of the store that can only send actions.
+    func writeOnly() -> ActionLens<
+        RawAction,
+        BaseRefinedAction,
+        SubRefinedAction
+    > {
+        ActionLens {
+            switch $0 {
+            case let .raw(actions):
+                self.underlying.dispatch(raw: actions)
+            case let .refined(actions):
+                self.underlying.dispatch(refined: actions.map(self.actionPromotion))
+            }
+        }
     }
 }
 
@@ -117,6 +129,36 @@ public extension StoreProtocol {
         .init(
             get: { self.state },
             set: { self.dispatch(refined: $0) }
+        )
+    }
+}
+
+public extension StoreProtocol {
+    /// Create a SwiftUI Binding from a lensing function and a `RawAction`.
+    /// - Parameters:
+    ///   - lens: A lens to the state property.
+    ///   - action: The refined action which will be called when the value is changed.
+    /// - Returns: A `Binding` whose getter is the property and whose setter dispatches the refined action.
+    func binding<Value>(
+        state lens: @escaping (SubState) -> Value,
+        rawAction transform: @escaping (Value) -> RawAction
+    ) -> Binding<Value> {
+        .init(
+            get: { lens(self.state) },
+            set: { self.dispatch(raw: transform($0)) }
+        )
+    }
+
+    /// Create a SwiftUI Binding from the `SubState` of the store and a `RawAction`.
+    /// - Parameters:
+    ///   - action: The refined action which will be called when the value is changed.
+    /// - Returns: A `Binding` whose getter is the state and whose setter dispatches the refined action.
+    func binding(
+        rawAction transform: @escaping (SubState) -> RawAction
+    ) -> Binding<SubState> {
+        .init(
+            get: { self.state },
+            set: { self.dispatch(raw: transform($0)) }
         )
     }
 }

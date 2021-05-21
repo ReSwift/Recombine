@@ -44,7 +44,7 @@ class StoreTests: XCTestCase {
         let state = try wait(for: stateRecorder.prefix(1), timeout: 1)
         XCTAssertEqual(state[0], string)
         let actions = try wait(for: actionsRecorder.prefix(1), timeout: 1)
-        XCTAssertEqual(actions, [.set(string)])
+        XCTAssertEqual(actions, [[.set(string)]])
     }
 
     func testBinding() throws {
