@@ -11,7 +11,8 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
     public let stateLens: (State) -> State = { $0 }
     public let rawActions = PassthroughSubject<RawAction, Never>()
     public let refinedActions = PassthroughSubject<[RefinedAction], Never>()
-    public let actionsAndState = PassthroughSubject<([RefinedAction], (previous: State, next: State)), Never>()
+    public let allStateUpdates = PassthroughSubject<State, Never>()
+    public let actionsPairedWithState = PassthroughSubject<([RefinedAction], (previous: State, next: State)), Never>()
     public let actionPromotion: (RefinedAction) -> RefinedAction = { $0 }
     public var actions: AnyPublisher<Action, Never> {
         Publishers.Merge(
@@ -26,36 +27,46 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
     public init<S: Scheduler, R: Reducer>(
         state: State,
         reducer: R,
-        middleware: Middleware<State, RawAction, RefinedAction> = .init { _, _ in Empty() },
+        middleware: Middleware<State, RefinedAction> = .init { [$1] },
+        thunk: Thunk<State, RawAction, RefinedAction> = .init { _, _ in Empty() },
         publishOn scheduler: S
     ) where R.State == State, R.Action == RefinedAction {
         self.state = state
 
         rawActions.flatMap { [unowned self] action in
-            middleware.transform($state.first(), action)
+            thunk.transform($state, action)
         }
         .map { [$0] }
         .subscribe(refinedActions)
         .store(in: &cancellables)
 
-        let duplicatedState = PassthroughSubject<State, Never>()
         Publishers.Zip(
             refinedActions,
-            duplicatedState
+            allStateUpdates
                 .prepend(state)
                 .scan([]) { acc, item in .init((acc + [item]).suffix(2)) }
                 .filter { $0.count == 2 }
                 .map { ($0[0], $0[1]) }
         )
-        .sink(receiveValue: actionsAndState.send)
+        .sink(receiveValue: actionsPairedWithState.send)
         .store(in: &cancellables)
 
-        refinedActions.scan(state) { state, actions in
+        Publishers.Zip(
+            refinedActions,
+            allStateUpdates
+                .prepend(state)
+        )
+        .map { actions, previousState in
+            actions.flatMap { middleware.transform(previousState, $0) }
+        }
+        .filter { !$0.isEmpty }
+        .scan(state) { state, actions in
             actions.reduce(state, reducer.reduce)
         }
         .receive(on: scheduler)
-        .sink { [unowned self] state in
-            duplicatedState.send(state)
+        .sink { [weak self] state in
+            guard let self = self else { return }
+            self.allStateUpdates.send(state)
             if self.state != state {
                 self.state = state
             }
