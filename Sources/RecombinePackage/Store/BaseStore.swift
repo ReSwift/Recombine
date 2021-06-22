@@ -33,8 +33,10 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
     ) where R.State == State, R.Action == RefinedAction {
         self.state = state
 
-        rawActions.flatMap { [unowned self] action in
-            thunk.transform($state, action)
+        rawActions.flatMap { [weak self] action in
+            self.publisher().flatMap {
+                thunk.transform($0.$state, action)
+            }
         }
         .map { [$0] }
         .subscribe(refinedActions)
@@ -72,19 +74,6 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
             }
         }
         .store(in: &cancellables)
-    }
-
-    public func lensing<NewState, NewAction>(
-        state lens: @escaping (SubState) -> NewState,
-        actions transform: @escaping (NewAction) -> SubRefinedAction
-    ) -> LensedStore<
-        State,
-        NewState,
-        RawAction,
-        RefinedAction,
-        NewAction
-    > {
-        .init(store: self, lensing: lens, actionPromotion: transform)
     }
 
     open func dispatch<S: Sequence>(refined actions: S) where S.Element == RefinedAction {

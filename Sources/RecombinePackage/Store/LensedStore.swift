@@ -25,24 +25,6 @@ public class LensedStore<BaseState: Equatable, SubState: Equatable, RawAction, B
             .store(in: &cancellables)
     }
 
-    public func lensing<NewState, NewAction>(
-        state lens: @escaping (SubState) -> NewState,
-        actions transform: @escaping (NewAction) -> SubRefinedAction
-    ) -> LensedStore<
-        BaseState,
-        NewState,
-        RawAction,
-        BaseRefinedAction,
-        NewAction
-    > {
-        let stateLens = self.stateLens
-        return .init(
-            store: underlying,
-            lensing: { lens(stateLens($0)) },
-            actionPromotion: { self.actionPromotion(transform($0)) }
-        )
-    }
-
     open func dispatch<S: Sequence>(refined actions: S) where S.Element == SubRefinedAction {
         self.actions.send(.init(actions))
         underlying.dispatch(refined: actions.map(actionPromotion))
