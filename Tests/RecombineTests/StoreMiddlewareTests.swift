@@ -29,13 +29,13 @@ class StoreMiddlewareTests: XCTestCase {
             state: TestFakes.StringTest.State(),
             reducer: TestFakes.StringTest.reducer,
             middleware: .init(),
-            thunk: firstThunk.concat(secondThunk),
+            thunk: firstThunk,
             publishOn: ImmediateScheduler.shared
         )
         let action = TestFakes.SetAction.string("OK")
         store.dispatch(raw: action)
 
-        XCTAssertEqual(store.state.value, "OK First Middleware Second Middleware")
+        XCTAssertEqual(store.state.value, "OK First Middleware")
     }
 
     /**
@@ -61,7 +61,7 @@ class StoreMiddlewareTests: XCTestCase {
      */
     func testThunkMultiplies() {
         let multiplexingThunk = Thunk<TestFakes.CounterTest.State, TestFakes.SetAction, TestFakes.SetAction> {
-            [$1, $1, $1].publisher
+            [$1, $1, $1].publisher.map { .refined($0) }
         }
         let store = BaseStore(
             state: TestFakes.CounterTest.State(count: 0),

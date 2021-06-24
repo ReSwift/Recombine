@@ -38,8 +38,14 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
                 thunk.transform($0.$state, action)
             }
         }
-        .map { [$0] }
-        .subscribe(refinedActions)
+        .sink { [weak self] value in
+            switch value {
+            case let .raw(action):
+                self?.dispatch(raw: action)
+            case let .refined(action):
+                self?.dispatch(refined: action)
+            }
+        }
         .store(in: &cancellables)
 
         Publishers.Zip(

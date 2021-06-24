@@ -26,30 +26,30 @@ let stateAccessingMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.
     return [action]
 }
 
-let firstThunk = Thunk<TestFakes.StringTest.State, TestFakes.SetAction, TestFakes.SetAction> { _, action -> Just<TestFakes.SetAction> in
+let firstThunk = Thunk<TestFakes.StringTest.State, TestFakes.SetAction, TestFakes.SetAction> { _, action -> Just<ActionStrata<TestFakes.SetAction, TestFakes.SetAction>> in
     switch action {
     case let .string(value):
-        return Just(.string(value + " First Middleware"))
+        return Just(.refined(.string(value + " First Middleware")))
     default:
-        return Just(action)
+        return Just(.refined(action))
     }
 }
 
-let secondThunk = Thunk<TestFakes.StringTest.State, TestFakes.SetAction, TestFakes.SetAction> { _, action -> Just<TestFakes.SetAction> in
+let secondThunk = Thunk<TestFakes.StringTest.State, TestFakes.SetAction, TestFakes.SetAction> { _, action -> Just<ActionStrata<TestFakes.SetAction, TestFakes.SetAction>> in
     switch action {
     case let .string(value):
-        return Just(.string(value + " Second Middleware"))
+        return Just(.refined(.string(value + " Second Middleware")))
     default:
-        return Just(action)
+        return Just(.refined(action))
     }
 }
 
-let stateAccessingThunk = Thunk<TestFakes.StringTest.State, TestFakes.SetAction, TestFakes.SetAction> { state, action -> AnyPublisher<TestFakes.SetAction, Never> in
+let stateAccessingThunk = Thunk<TestFakes.StringTest.State, TestFakes.SetAction, TestFakes.SetAction> { state, action -> AnyPublisher<ActionStrata<TestFakes.SetAction, TestFakes.SetAction>, Never> in
     if case let .string(value) = action {
         return state.map {
-            .string($0.value! + $0.value!)
+            .refined(.string($0.value! + $0.value!))
         }
         .eraseToAnyPublisher()
     }
-    return Just(action).eraseToAnyPublisher()
+    return Just(.refined(action)).eraseToAnyPublisher()
 }
