@@ -14,6 +14,10 @@ public protocol StoreProtocol: ObservableObject, Subscriber {
     var actionPromotion: (SubRefinedAction) -> BaseRefinedAction { get }
     func dispatch<S: Sequence>(raw: S) where S.Element == RawAction
     func dispatch<S: Sequence>(refined: S) where S.Element == SubRefinedAction
+    func eraseToAnyStore() -> AnyStore<BaseState, SubState, RawAction, BaseRefinedAction, SubRefinedAction>
+}
+
+public extension StoreProtocol {
     func lensing<NewState, NewAction>(
         state lens: @escaping (SubState) -> NewState,
         actions transform: @escaping (NewAction) -> SubRefinedAction
@@ -23,11 +27,16 @@ public protocol StoreProtocol: ObservableObject, Subscriber {
         RawAction,
         BaseRefinedAction,
         NewAction
-    >
-    func eraseToAnyStore() -> AnyStore<BaseState, SubState, RawAction, BaseRefinedAction, SubRefinedAction>
-}
+    > {
+        let stateLens = self.stateLens
+        let actionPromotion = self.actionPromotion
+        return .init(
+            store: underlying,
+            lensing: { lens(stateLens($0)) },
+            actionPromotion: { actionPromotion(transform($0)) }
+        )
+    }
 
-public extension StoreProtocol {
     func lensing<NewState>(
         state lens: @escaping (SubState) -> NewState
     ) -> LensedStore<
@@ -52,9 +61,8 @@ public extension StoreProtocol {
         lensing(state: { $0 }, actions: transform)
     }
 
-    /// Create a LensedStore that cannot be updated with actions.
-    /// - Returns: A `LensedStore`, whose state cannot be updated with actions.
-    func readOnly() -> LensedStore<
+    /// Create a `LensedStore` that cannot be updated with actions.
+    var readOnly: LensedStore<
         BaseState,
         SubState,
         RawAction,
@@ -64,8 +72,8 @@ public extension StoreProtocol {
         lensing(actions: { _ -> SubRefinedAction in })
     }
 
-    /// A lens of the store that can only send actions.
-    func writeOnly() -> ActionLens<
+    /// Create an `ActionLens`, which can only send actions.
+    var writeOnly: ActionLens<
         RawAction,
         BaseRefinedAction,
         SubRefinedAction
@@ -174,6 +182,12 @@ public extension StoreProtocol {
 
     func eraseToAnyStore() -> AnyStore<BaseState, SubState, RawAction, BaseRefinedAction, SubRefinedAction> {
         AnyStore(self)
+    }
+}
+
+public extension StoreProtocol where SubRefinedAction == () {
+    func dispatchRefined() {
+        dispatch(refined: ())
     }
 }
 

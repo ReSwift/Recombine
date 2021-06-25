@@ -20,28 +20,10 @@ public class AnyStore<BaseState: Equatable, SubState: Equatable, RawAction, Base
         stateLens = store.stateLens
         actionPromotion = store.actionPromotion
         state = store.state
-        store.statePublisher.sink { [unowned self] state in
-            self.state = state
+        store.statePublisher.sink { [weak self] state in
+            self?.state = state
         }
         .store(in: &cancellables)
-    }
-
-    public func lensing<NewState, NewAction>(
-        state lens: @escaping (SubState) -> NewState,
-        actions transform: @escaping (NewAction) -> SubRefinedAction
-    ) -> LensedStore<
-        BaseState,
-        NewState,
-        RawAction,
-        BaseRefinedAction,
-        NewAction
-    > {
-        let stateLens = self.stateLens
-        return .init(
-            store: underlying,
-            lensing: { lens(stateLens($0)) },
-            actionPromotion: { self.actionPromotion(transform($0)) }
-        )
     }
 
     public func dispatch<S: Sequence>(refined actions: S) where S.Element == SubRefinedAction {
