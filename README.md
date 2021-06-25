@@ -19,13 +19,13 @@ A non-comprehensive list of benefits:
 
 # About Recombine
 
-Recombine relies on three principles:
+Recombine relies on four principles:
 - **The Store** stores your entire app state in the form of a single data structure. This state can only be modified by dispatching Actions to the store. Whenever the state in the store changes, the store will notify all observers.
 - **Actions** are a declarative way of describing a state change. Actions don't contain any code, they are consumed by the store and forwarded to reducers. Reducers will handle the actions by implementing a different state change for each action.
 - **Reducers** provide pure functions that create a new app state from actions and the current app state. These are your business and navigation logic routers.
 - **Middleware** is a transformative type that lets you go from unrefined actions to refined ones, allowing for asynchronous calls and shortcut expansion of one action into many. Middleware is perfect for extracting records from databases or servers.
 
-![](Docs/img/recombine_concept.png)
+![Recombine flow diagram](Docs/img/recombine-diagram.svg)
 
 For a very simple app, one that maintains a counter, you can define the app state as following:
 

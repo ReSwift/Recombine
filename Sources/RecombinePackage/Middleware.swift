@@ -1,8 +1,7 @@
 import Combine
 
-/// Middleware is a dependency injection structure that allows you to transform raw actions into refined ones,
+/// Middleware is a structure that allows you to transform refined actions, filter them, or add to them,
 /// Refined actions produced by Middleware are then forwarded to the main reducer.
-///
 public struct Middleware<State, Action> {
     public typealias Function = (State, Action) -> [Action]
     public typealias Transform<Result> = (State, Action) -> Result
