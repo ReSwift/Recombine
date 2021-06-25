@@ -36,7 +36,7 @@ import Combine
 /// Then, we replace the `URLSession` publisher with the `statePublisher` using `flatMap(_:)`, which itself returns a refined action: `.setModel(MyModel)`.
 
 public struct Thunk<State, Input, Output> {
-    public typealias StatePublisher = Published<State>.Publisher
+    public typealias StatePublisher = Publishers.First<Published<State>.Publisher>
     public typealias Function = (StatePublisher, Input) -> AnyPublisher<ActionStrata<Input, Output>, Never>
     internal let transform: Function
 

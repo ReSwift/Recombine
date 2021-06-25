@@ -35,7 +35,7 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
 
         rawActions.flatMap { [weak self] action in
             self.publisher().flatMap {
-                thunk.transform($0.$state, action)
+                thunk.transform($0.$state.first(), action)
             }
         }
         .sink { [weak self] value in
