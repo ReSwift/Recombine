@@ -27,6 +27,7 @@ extension TestFakes {
             enum SubState: Equatable {
                 case set(String)
             }
+
             case sub(SubState)
         }
 
@@ -34,6 +35,7 @@ extension TestFakes {
             struct SubState: Equatable {
                 var value: String = ""
             }
+
             var subState: SubState = .init()
         }
 
@@ -47,11 +49,18 @@ extension TestFakes {
 }
 
 extension TestFakes {
+    enum ThunkRawAction {
+        case first(String)
+        case second(String)
+    }
+}
+
+extension TestFakes {
     enum StringTest {
         struct State: Equatable {
             var value: String?
         }
-        
+
         static let reducer = MutatingReducer<State, SetAction> { state, action in
             switch action {
             case let .string(value):
@@ -68,7 +77,7 @@ extension TestFakes {
         struct State: Equatable {
             var value: Int?
         }
-        
+
         static let reducer = MutatingReducer<State, SetAction> { state, action in
             switch action {
             case let .int(value):

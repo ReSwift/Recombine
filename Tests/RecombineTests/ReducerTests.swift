@@ -1,28 +1,26 @@
-import XCTest
 @testable import Recombine
+import XCTest
 
 class MockReducerContainer<Action> {
-
     var calledWithAction: [Action] = []
     var reducer: MutatingReducer<TestFakes.CounterTest.State, Action>!
 
     init() {
-        reducer = .init { state, action in
+        reducer = .init { _, action in
             self.calledWithAction.append(action)
         }
     }
 }
 
-let increaseByOneReducer: MutatingReducer<TestFakes.CounterTest.State, TestFakes.SetAction> = .init { state, action in
+let increaseByOneReducer: MutatingReducer<TestFakes.CounterTest.State, TestFakes.SetAction> = .init { state, _ in
     state.count += 1
 }
 
-let increaseByTwoReducer: MutatingReducer<TestFakes.CounterTest.State, TestFakes.SetAction> = .init { state, action in
+let increaseByTwoReducer: MutatingReducer<TestFakes.CounterTest.State, TestFakes.SetAction> = .init { state, _ in
     state.count += 2
 }
 
 class ReducerTests: XCTestCase {
-
     /**
      it calls each of the reducers with the given action exactly once
      */
@@ -44,7 +42,6 @@ class ReducerTests: XCTestCase {
      it combines the results from each individual reducer correctly
      */
     func testCombinesReducerResults() {
-        
         let combinedReducer = MutatingReducer(increaseByOneReducer, increaseByTwoReducer)
         var state = TestFakes.CounterTest.State()
         combinedReducer.transform(&state, .noop)

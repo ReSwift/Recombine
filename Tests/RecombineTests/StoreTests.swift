@@ -1,7 +1,7 @@
-import XCTest
-@testable import Recombine
 import Combine
 import CombineExpectations
+@testable import Recombine
+import XCTest
 
 class StoreTests: XCTestCase {
     /**
@@ -22,12 +22,13 @@ class StoreTests: XCTestCase {
 
         XCTAssertEqual(deInitCount, 1)
     }
-    
+
     func testLensing() throws {
         let store = BaseStore(
             state: TestFakes.NestedTest.State(),
             reducer: TestFakes.NestedTest.reducer,
             middleware: .init(),
+            thunk: .init(),
             publishOn: ImmediateScheduler.shared
         )
         let subStore = store.lensing(
@@ -42,9 +43,9 @@ class StoreTests: XCTestCase {
         subStore.dispatch(refined: .set(string))
 
         let state = try wait(for: stateRecorder.prefix(1), timeout: 1)
-        XCTAssertEqual(state[0], string)
+        XCTAssertEqual(state.first, string)
         let actions = try wait(for: actionsRecorder.prefix(1), timeout: 1)
-        XCTAssertEqual(actions, [.set(string)])
+        XCTAssertEqual(actions, [[.set(string)]])
     }
 
     func testBinding() throws {
@@ -52,16 +53,17 @@ class StoreTests: XCTestCase {
             state: TestFakes.NestedTest.State(),
             reducer: TestFakes.NestedTest.reducer,
             middleware: .init(),
+            thunk: .init(),
             publishOn: ImmediateScheduler.shared
         )
         let binding1 = store.binding(
             state: \.subState.value,
-            actions: { .sub(.set("\($0)1")) }
+            action: { .sub(.set("\($0)1")) }
         )
         let binding2 = store.lensing(
             state: \.subState.value
         ).binding(
-            actions: { .sub(.set("\($0)2")) }
+            action: { .sub(.set("\($0)2")) }
         )
         let binding3 = store.lensing(
             state: \.subState,
@@ -96,30 +98,29 @@ class DeInitStore<State: Equatable>: BaseStore<State, TestFakes.SetAction, TestF
     convenience init(
         state: State,
         reducer: MutatingReducer<State, TestFakes.SetAction>,
-        middleware: Middleware<State, TestFakes.SetAction, TestFakes.SetAction> = .init(),
+        thunk: Thunk<State, TestFakes.SetAction, TestFakes.SetAction> = .init(),
         deInitAction: @escaping () -> Void
     ) {
         self.init(
             state: state,
             reducer: reducer,
-            middleware: middleware,
+            thunk: thunk,
             publishOn: ImmediateScheduler.shared
         )
         self.deInitAction = deInitAction
     }
 
-    required init<S, R>(
+    override init<S, R>(
         state: State,
-        stateEquality: @escaping (State, State) -> Bool,
         reducer: R,
-        middleware: Middleware<State, TestFakes.SetAction, TestFakes.SetAction> = .init(),
+        middleware _: Middleware<State, TestFakes.SetAction> = .init(),
+        thunk: Thunk<State, TestFakes.SetAction, TestFakes.SetAction> = .init(),
         publishOn scheduler: S
-    ) where State == R.State, TestFakes.SetAction == R.Action, S : Scheduler, R : Reducer {
+    ) where State == R.State, TestFakes.SetAction == R.Action, S: Scheduler, R: Reducer {
         super.init(
             state: state,
-            stateEquality: stateEquality,
             reducer: reducer,
-            middleware: middleware,
+            thunk: thunk,
             publishOn: scheduler
         )
     }

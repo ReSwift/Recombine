@@ -1,30 +1,46 @@
-import Recombine
 import Combine
+import Recombine
 
-let firstMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction, TestFakes.SetAction> { state, action -> Just<TestFakes.SetAction> in
+let firstMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction> { _, action -> [TestFakes.SetAction] in
     switch action {
     case let .string(value):
-        return Just(.string(value + " First Middleware"))
+        return [.string(value + " First Middleware")]
     default:
-        return Just(action)
+        return [action]
     }
 }
 
-let secondMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction, TestFakes.SetAction> { state, action -> Just<TestFakes.SetAction> in
+let secondMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction> { _, action -> [TestFakes.SetAction] in
     switch action {
     case let .string(value):
-        return Just(.string(value + " Second Middleware"))
+        return [.string(value + " Second Middleware")]
     default:
-        return Just(action)
+        return [action]
     }
 }
 
-let stateAccessingMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction, TestFakes.SetAction> { state, action -> AnyPublisher<TestFakes.SetAction, Never> in
+let stateAccessingMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction> { state, action -> [TestFakes.SetAction] in
+    if case let .string(value) = action {
+        return [.string(state.value! + state.value!)]
+    }
+    return [action]
+}
+
+let thunk = Thunk<TestFakes.StringTest.State, TestFakes.ThunkRawAction, TestFakes.SetAction> { _, action -> Just<ActionStrata<TestFakes.ThunkRawAction, TestFakes.SetAction>> in
+    switch action {
+    case let .first(value):
+        return Just(.raw(.second(value + " First Thunk")))
+    case let .second(value):
+        return Just(.refined(.string(value + " Second Thunk")))
+    }
+}
+
+let stateAccessingThunk = Thunk<TestFakes.StringTest.State, TestFakes.SetAction, TestFakes.SetAction> { state, action -> AnyPublisher<ActionStrata<TestFakes.SetAction, TestFakes.SetAction>, Never> in
     if case let .string(value) = action {
         return state.map {
-            .string($0.value! + $0.value!)
+            .refined(.string($0.value! + $0.value!))
         }
         .eraseToAnyPublisher()
     }
-    return Just(action).eraseToAnyPublisher()
+    return Just(.refined(action)).eraseToAnyPublisher()
 }
