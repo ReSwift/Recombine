@@ -26,21 +26,12 @@ let stateAccessingMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.
     return [action]
 }
 
-let firstThunk = Thunk<TestFakes.StringTest.State, TestFakes.SetAction, TestFakes.SetAction> { _, action -> Just<ActionStrata<TestFakes.SetAction, TestFakes.SetAction>> in
+let thunk = Thunk<TestFakes.StringTest.State, TestFakes.ThunkRawAction, TestFakes.SetAction> { _, action -> Just<ActionStrata<TestFakes.ThunkRawAction, TestFakes.SetAction>> in
     switch action {
-    case let .string(value):
-        return Just(.refined(.string(value + " First Middleware")))
-    default:
-        return Just(.refined(action))
-    }
-}
-
-let secondThunk = Thunk<TestFakes.StringTest.State, TestFakes.SetAction, TestFakes.SetAction> { _, action -> Just<ActionStrata<TestFakes.SetAction, TestFakes.SetAction>> in
-    switch action {
-    case let .string(value):
-        return Just(.refined(.string(value + " Second Middleware")))
-    default:
-        return Just(.refined(action))
+    case let .first(value):
+        return Just(.raw(.second(value + " First Thunk")))
+    case let .second(value):
+        return Just(.refined(.string(value + " Second Thunk")))
     }
 }
 

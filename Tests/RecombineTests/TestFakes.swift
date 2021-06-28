@@ -49,6 +49,13 @@ extension TestFakes {
 }
 
 extension TestFakes {
+    enum ThunkRawAction {
+        case first(String)
+        case second(String)
+    }
+}
+
+extension TestFakes {
     enum StringTest {
         struct State: Equatable {
             var value: String?

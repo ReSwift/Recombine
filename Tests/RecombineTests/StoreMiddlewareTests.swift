@@ -29,13 +29,12 @@ class StoreMiddlewareTests: XCTestCase {
             state: TestFakes.StringTest.State(),
             reducer: TestFakes.StringTest.reducer,
             middleware: .init(),
-            thunk: firstThunk,
+            thunk: thunk,
             publishOn: ImmediateScheduler.shared
         )
-        let action = TestFakes.SetAction.string("OK")
-        store.dispatch(raw: action)
+        store.dispatch(raw: .first("OK"))
 
-        XCTAssertEqual(store.state.value, "OK First Middleware")
+        XCTAssertEqual(store.state.value, "OK First Thunk Second Thunk")
     }
 
     /**
