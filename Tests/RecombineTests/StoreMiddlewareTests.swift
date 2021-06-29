@@ -16,7 +16,8 @@ class StoreMiddlewareTests: XCTestCase {
             publishOn: ImmediateScheduler.shared
         )
         let action = TestFakes.SetAction.string("OK")
-        store.dispatch(raw: action)
+        store.dispatch(refined: [])
+        store.dispatch(refined: action)
 
         XCTAssertEqual(store.state.value, "OK First Middleware Second Middleware")
     }

@@ -67,7 +67,6 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
         .map { actions, previousState in
             actions.flatMap { middleware.transform(previousState, $0) }
         }
-        .filter { !$0.isEmpty }
         .scan(state) { state, actions in
             actions.reduce(state, reducer.reduce)
         }
