@@ -6,8 +6,8 @@
         "repositoryURL": "https://github.com/groue/CombineExpectations",
         "state": {
           "branch": null,
-          "revision": "5c36f3199960776fc055196a93ca04bfc00e1857",
-          "version": "0.7.0"
+          "revision": "5118f805bdeac7e81dc8e92c78b7ce475201dec8",
+          "version": "0.9.0"
         }
       },
       {
@@ -42,8 +42,8 @@
         "repositoryURL": "https://github.com/nicklockwood/SwiftFormat.git",
         "state": {
           "branch": null,
-          "revision": "e8f0d54227f0ca71cdee509164ecedb7d19189fd",
-          "version": "0.48.2"
+          "revision": "6f16a7c66c35cea3539becfc440b5d4822adc90f",
+          "version": "0.48.6"
         }
       }
     ]

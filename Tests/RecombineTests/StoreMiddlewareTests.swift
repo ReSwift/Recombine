@@ -1,4 +1,5 @@
 import Combine
+import CombineExpectations
 import Foundation
 @testable import Recombine
 import XCTest
@@ -23,6 +24,38 @@ class StoreMiddlewareTests: XCTestCase {
     }
 
     /**
+     it reruns for dispatching
+     */
+    func testRedispatch() throws {
+        let middleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction> { _, action, dispatch -> [TestFakes.SetAction] in
+            switch action {
+            case let .string(value):
+                if !value.contains("Middleware") {
+                    dispatch([.string(value + " Middleware")])
+                    return []
+                }
+            default:
+                break
+            }
+            return [action]
+        }
+        let store = BaseStore(
+            state: TestFakes.StringTest.State(),
+            reducer: TestFakes.StringTest.reducer,
+            middleware: middleware,
+            thunk: .init(),
+            publishOn: ImmediateScheduler.shared
+        )
+        let recorder = store.$state.dropFirst().record()
+
+        store.dispatch(refined: .string("OK"))
+
+        let value = try wait(for: recorder.next(), timeout: 1)
+
+        XCTAssertEqual(value.value, "OK Middleware")
+    }
+
+    /**
      it can decorate dispatch function
      */
     func testDecorateThunkDispatch() {
@@ -42,8 +75,8 @@ class StoreMiddlewareTests: XCTestCase {
      it actions should be multiplied via the increase function
      */
     func testMiddlewareMultiplies() {
-        let multiplexingMiddleware = Middleware<TestFakes.CounterTest.State, TestFakes.SetAction> {
-            [$1, $1, $1]
+        let multiplexingMiddleware = Middleware<TestFakes.CounterTest.State, TestFakes.SetAction> { _, action, _ in
+            Array(repeating: action, count: 3)
         }
         let store = BaseStore(
             state: TestFakes.CounterTest.State(count: 0),

@@ -10,14 +10,15 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
     public var underlying: BaseStore<State, RawAction, RefinedAction> { self }
     public let stateLens: (State) -> State = { $0 }
     public let rawActions = PassthroughSubject<RawAction, Never>()
-    public let refinedActions = PassthroughSubject<[RefinedAction], Never>()
+    public let preMiddlewareRefinedActions = PassthroughSubject<[RefinedAction], Never>()
+    public let postMiddlewareRefinedActions = PassthroughSubject<[RefinedAction], Never>()
     public let allStateUpdates = PassthroughSubject<State, Never>()
-    public let actionsPairedWithState = PassthroughSubject<([RefinedAction], (previous: State, next: State)), Never>()
+    public let actionsPairedWithState = PassthroughSubject<([RefinedAction], (previous: State, current: State)), Never>()
     public let actionPromotion: (RefinedAction) -> RefinedAction = { $0 }
     public var actions: AnyPublisher<Action, Never> {
         Publishers.Merge(
             rawActions.map(Action.raw),
-            refinedActions.flatMap(\.publisher).map(Action.refined)
+            postMiddlewareRefinedActions.flatMap(\.publisher).map(Action.refined)
         )
         .eraseToAnyPublisher()
     }
@@ -27,7 +28,7 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
     public init<S: Scheduler, R: Reducer>(
         state: State,
         reducer: R,
-        middleware: Middleware<State, RefinedAction> = .init { [$1] },
+        middleware: Middleware<State, RefinedAction> = .init(),
         thunk: Thunk<State, RawAction, RefinedAction> = .init { _, _ in Empty() },
         publishOn scheduler: S
     ) where R.State == State, R.Action == RefinedAction {
@@ -49,7 +50,7 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
         .store(in: &cancellables)
 
         Publishers.Zip(
-            refinedActions,
+            postMiddlewareRefinedActions,
             allStateUpdates
                 .prepend(state)
                 .scan([]) { acc, item in .init((acc + [item]).suffix(2)) }
@@ -59,30 +60,39 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
         .sink(receiveValue: actionsPairedWithState.send)
         .store(in: &cancellables)
 
-        Publishers.Zip(
-            refinedActions,
-            allStateUpdates
-                .prepend(state)
-        )
-        .map { actions, previousState in
-            actions.flatMap { middleware.transform(previousState, $0) }
-        }
-        .scan(state) { state, actions in
-            actions.reduce(state, reducer.reduce)
-        }
-        .receive(on: scheduler)
-        .sink { [weak self] state in
-            guard let self = self else { return }
-            self.allStateUpdates.send(state)
-            if self.state != state {
-                self.state = state
+        preMiddlewareRefinedActions
+            .flatMap { [weak self] actions in
+                self.publisher()
+                    .flatMap { $0.$state.first() }
+                    .map { (actions, $0) }
             }
-        }
-        .store(in: &cancellables)
+            .map { [weak self] actions, previousState in
+                actions.flatMap {
+                    middleware.transform(previousState, $0) { self?.dispatch(refined: $0) }
+                }
+            }
+            .sink(receiveValue: { [weak self] actions in
+                self?.postMiddlewareRefinedActions.send(actions)
+            })
+            .store(in: &cancellables)
+
+        postMiddlewareRefinedActions
+            .scan(state) { state, actions in
+                actions.reduce(state, reducer.reduce)
+            }
+            .receive(on: scheduler)
+            .sink { [weak self] state in
+                guard let self = self else { return }
+                self.allStateUpdates.send(state)
+                if self.state != state {
+                    self.state = state
+                }
+            }
+            .store(in: &cancellables)
     }
 
     open func dispatch<S: Sequence>(refined actions: S) where S.Element == RefinedAction {
-        refinedActions.send(.init(actions))
+        preMiddlewareRefinedActions.send(.init(actions))
     }
 
     open func dispatch<S: Sequence>(raw actions: S) where S.Element == RawAction {
