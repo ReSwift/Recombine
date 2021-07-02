@@ -39,7 +39,7 @@ extension TestFakes {
             var subState: SubState = .init()
         }
 
-        static let reducer: MutatingReducer<State, Action> = .init { state, action, _ in
+        static let reducer: MutatingReducer<State, Action> = .init { state, action in
             switch action {
             case let .sub(.set(value)):
                 state.subState.value = value
@@ -61,7 +61,7 @@ extension TestFakes {
             var value: String?
         }
 
-        static let reducer = MutatingReducer<State, SetAction> { state, action, _ in
+        static let reducer = MutatingReducer<State, SetAction> { state, action in
             switch action {
             case let .string(value):
                 state.value = value
@@ -78,7 +78,7 @@ extension TestFakes {
             var value: Int?
         }
 
-        static let reducer = MutatingReducer<State, SetAction> { state, action, _ in
+        static let reducer = MutatingReducer<State, SetAction> { state, action in
             switch action {
             case let .int(value):
                 state.value = value

@@ -77,10 +77,8 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
             .store(in: &cancellables)
 
         postMiddlewareRefinedActions
-            .scan(state) { [weak self] state, actions in
-                actions.reduce(state) {
-                    reducer.reduce(state: $0, action: $1, redispatch: { self?.dispatch(refined: $0) })
-                }
+            .scan(state) { state, actions in
+                actions.reduce(state, reducer.reduce)
             }
             .receive(on: scheduler)
             .sink { [weak self] state in

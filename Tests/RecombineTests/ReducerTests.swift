@@ -6,17 +6,17 @@ class MockReducerContainer<Action> {
     var reducer: MutatingReducer<TestFakes.CounterTest.State, Action>!
 
     init() {
-        reducer = .init { _, action, _ in
+        reducer = .init { _, action in
             self.calledWithAction.append(action)
         }
     }
 }
 
-let increaseByOneReducer: MutatingReducer<TestFakes.CounterTest.State, TestFakes.SetAction> = .init { state, _, _ in
+let increaseByOneReducer: MutatingReducer<TestFakes.CounterTest.State, TestFakes.SetAction> = .init { state, _ in
     state.count += 1
 }
 
-let increaseByTwoReducer: MutatingReducer<TestFakes.CounterTest.State, TestFakes.SetAction> = .init { state, _, _ in
+let increaseByTwoReducer: MutatingReducer<TestFakes.CounterTest.State, TestFakes.SetAction> = .init { state, _ in
     state.count += 2
 }
 
@@ -30,7 +30,7 @@ class ReducerTests: XCTestCase {
         let combinedReducer = MutatingReducer(mockReducer1.reducer, mockReducer2.reducer)
 
         var state = TestFakes.CounterTest.State()
-        _ = combinedReducer.transform(&state, .noop) { (_: TestFakes.SetAction...) in }
+        _ = combinedReducer.transform(&state, .noop)
 
         XCTAssertEqual(mockReducer1.calledWithAction.count, 1)
         XCTAssertEqual(mockReducer2.calledWithAction.count, 1)
@@ -44,7 +44,7 @@ class ReducerTests: XCTestCase {
     func testCombinesReducerResults() {
         let combinedReducer = MutatingReducer(increaseByOneReducer, increaseByTwoReducer)
         var state = TestFakes.CounterTest.State()
-        combinedReducer.transform(&state, .noop) { (_: TestFakes.SetAction...) in }
+        combinedReducer.transform(&state, .noop)
 
         XCTAssertEqual(state.count, 3)
     }
