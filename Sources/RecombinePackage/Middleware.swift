@@ -4,7 +4,7 @@ import Combine
 /// Refined actions produced by Middleware are then forwarded to the main reducer.
 public struct Middleware<State, Action> {
     /// A function to dispatch actions such that they flow through all of the `Middleware` again.
-    public typealias Dispatch = ([Action]) -> Void
+    public typealias Dispatch = (Action...) -> Void
     public typealias Function = (State, Action, Dispatch) -> [Action]
     internal let transform: Function
 

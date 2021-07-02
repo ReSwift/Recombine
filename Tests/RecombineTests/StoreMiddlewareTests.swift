@@ -31,7 +31,7 @@ class StoreMiddlewareTests: XCTestCase {
             switch action {
             case let .string(value):
                 if !value.contains("Middleware") {
-                    dispatch([.string(value + " Middleware")])
+                    dispatch(.string(value + " Middleware"))
                     return []
                 }
             default:
