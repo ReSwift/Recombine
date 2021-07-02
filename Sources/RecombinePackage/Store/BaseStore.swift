@@ -98,4 +98,8 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
     open func dispatch<S: Sequence>(raw actions: S) where S.Element == RawAction {
         actions.forEach(rawActions.send)
     }
+
+    open func injectBypassingMiddleware<S: Sequence>(actions: S) where S.Element == RefinedAction {
+        postMiddlewareRefinedActions.send(.init(actions))
+    }
 }
