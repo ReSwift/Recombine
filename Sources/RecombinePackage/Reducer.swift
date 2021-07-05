@@ -16,7 +16,7 @@ public extension Reducer {
     }
 
     init<S: Sequence>(_ reducers: S) where S.Element: Reducer, S.Element.Transform == Transform {
-        self = reducers.reduce(Self()) {
+        self = reducers.reduce(.init()) {
             $0.concat($1)
         }
     }
