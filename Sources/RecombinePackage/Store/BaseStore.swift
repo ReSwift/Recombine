@@ -85,7 +85,7 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
             .store(in: &cancellables)
     }
 
-    public var actions: AnyPublisher<Action, Never> {
+    open var actions: AnyPublisher<Action, Never> {
         Publishers.Merge(
             _rawActions.map(Action.raw),
             _postMiddlewareRefinedActions.flatMap(\.publisher).map(Action.refined)
