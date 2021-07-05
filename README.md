@@ -23,7 +23,8 @@ Recombine relies on four principles:
 - **The Store** stores your entire app state in the form of a single data structure. This state can only be modified by dispatching Actions to the store. Whenever the state in the store changes, the store will notify all observers.
 - **Actions** are a declarative way of describing a state change. Actions don't contain any code, they are consumed by the store and forwarded to reducers. Reducers will handle the actions by implementing a different state change for each action.
 - **Reducers** provide pure functions that create a new app state from actions and the current app state. These are your business and navigation logic routers.
-- **Middleware** is a transformative type that lets you go from unrefined actions to refined ones, allowing for asynchronous calls and shortcut expansion of one action into many. Middleware is perfect for extracting records from databases or servers.
+- **Thunk** is a transformative type that lets you go from unrefined actions to refined ones, allowing for asynchronous calls and shortcut expansion of one action into many. Middleware is perfect for extracting records from databases or servers.
+- **Middleware** is a type that lets you add or remove actions before they flow to the reducer, as well as redispatch actions so that they can flow through the middleware chain.
 
 ![Recombine flow diagram](Docs/img/recombine-diagram.svg)
 
@@ -93,12 +94,12 @@ extension Redux {
 }
 ```
 
-We also need `Middleware` to intercept our "raw" actions and convert them into "refined" ones.
+We also need `Thunk` to intercept our "raw" actions and convert them into "refined" ones.
 Here we can do asynchronous operations like network requests and aggregate operations like resetting the state.
 
 ```swift
 extension Redux {
-    static let middleware: Middleware<State, Action.Raw, Action.Refined> = Middleware { state, action -> AnyPublisher<Action.Refined, Never> in
+    static let thunk: Thunk<State, Action.Raw, Action.Refined> = .init { state, action -> AnyPublisher<Action.Refined, Never> in
         switch action {
         case let .networkCall(url):
             return URLSession.shared
@@ -135,7 +136,7 @@ extension Redux {
     static let store = Store(
         state: .init(counter: 0),
         reducer: Reducer.main,
-        middleware: middleware,
+        thunk: thunk,
         publishOn: RunLoop.main
     )
 }
