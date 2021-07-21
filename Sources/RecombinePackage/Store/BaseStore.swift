@@ -88,7 +88,9 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
                 })
                 .store(in: &self.cancellables)
         }
-        group?.wait()
+        DispatchQueue.global().sync {
+            group?.wait()
+        }
     }
 
     open var actions: AnyPublisher<Action, Never> {
