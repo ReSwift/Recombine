@@ -170,7 +170,7 @@ extension AtomicCollectionPublisher.Subscription: Cancellable {
     }
 }
 
-extension AtomicCollection {
+public extension AtomicCollection {
     var publisher: AtomicCollectionPublisher<Element> {
         .init(self)
     }
