@@ -15,17 +15,10 @@ extension XCTestCase {
         dropFirst: Int,
         timeout: TimeInterval = 1,
         actions: [ActionStrata<[Store.RawAction], [Store.SubRefinedAction]>]
-    ) throws -> Store.SubState {
+    ) throws -> Store.SubState? {
         let recorder = store.recorder
-        actions.forEach {
-            switch $0 {
-            case let .raw(actions):
-                store.dispatch(raw: actions)
-            case let .refined(actions):
-                store.dispatch(refined: actions)
-            }
-        }
-        return try wait(for: recorder.prefix(dropFirst + 1), timeout: timeout).last!
+        store.dispatch(actions: actions)
+        return try wait(for: recorder.prefix(dropFirst + 1), timeout: timeout).last
     }
 
     func nextEquals<Store: StoreProtocol, State: Equatable>(
@@ -42,7 +35,7 @@ extension XCTestCase {
                 dropFirst: dropFirst,
                 timeout: timeout,
                 actions: actions
-            )[keyPath: keyPath],
+            )?[keyPath: keyPath],
             value
         )
     }

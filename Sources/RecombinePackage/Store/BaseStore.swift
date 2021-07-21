@@ -50,39 +50,42 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
         .sink(receiveValue: _actionsPairedWithState.send)
         .store(in: &cancellables)
 
+        _preMiddlewareRefinedActions
+            .flatMap { [weak self] actions in
+                self.publisher()
+                    .flatMap { $0.$state.first() }
+                    .map { (actions, $0) }
+            }
+            .map { [weak self] actions, previousState in
+                actions.flatMap {
+                    middleware.transform(previousState, $0) { (actions: Action...) in
+                        self?.dispatch(actions: actions)
+                    }
+                }
+            }
+            .sink(receiveValue: { [weak self] in
+                self?._postMiddlewareRefinedActions.send($0)
+            })
+            .store(in: &cancellables)
+
         var group = Optional(DispatchGroup())
         group?.enter()
         DispatchQueue.global().async {
-            self._preMiddlewareRefinedActions
-                .flatMap { [weak self] actions in
-                    self.publisher()
-                        .flatMap { $0.$state.first() }
-                        .map { (actions, $0) }
-                }
-                .map { [weak self] actions, previousState in
-                    actions.flatMap {
-                        middleware.transform(previousState, $0) { (actions: Action...) in
-                            self?.dispatch(actions: actions)
-                        }
-                    }
-                }
-                .handleEvents(receiveOutput: { [weak self] in
-                    self?._postMiddlewareRefinedActions.send($0)
-                })
+            self._postMiddlewareRefinedActions
                 .scan(state) { state, actions in
                     actions.reduce(state, reducer.reduce)
                 }
                 .prepend(state)
                 .receive(on: scheduler)
-                .sink { [weak self] state in
+                .sink(receiveValue: { [weak self] state in
+                    group?.leave()
+                    group = nil
                     guard let self = self else { return }
                     self._allStateUpdates.send(state)
                     if self.state != state {
                         self.state = state
                     }
-                    group?.leave()
-                    group = nil
-                }
+                })
                 .store(in: &self.cancellables)
         }
         group?.wait()
