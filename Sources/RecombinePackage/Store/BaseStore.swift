@@ -17,9 +17,6 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
     private let _postMiddlewareRefinedActions = PassthroughSubject<[RefinedAction], Never>()
     private let _allStateUpdates = PassthroughSubject<State, Never>()
     private let _actionsPairedWithState = PassthroughSubject<ActionsAndState, Never>()
-    private let atomicPreMiddlewareRefinedActions = AtomicCollection<[RefinedAction]>([])
-    private let atomicPostMiddlewareRefinedActions = AtomicCollection<[RefinedAction]>([])
-    private let atomicRawActions = AtomicCollection<[RawAction]>([])
     private var cancellables = Set<AnyCancellable>()
 
     public init<S: Scheduler, R: Reducer>(
@@ -31,31 +28,21 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
     ) where R.State == State, R.Action == RefinedAction {
         self.state = state
 
-        atomicRawActions
-            .publisher
-            .handleEvents(receiveOutput: { [weak self] in
-                self?._rawActions.send($0)
-            })
+        _rawActions
             .flatMap(\.publisher)
             .flatMap { [weak self] action in
                 self.publisher().flatMap {
                     thunk.transform($0.$state.first(), action)
                 }
             }
-            .sink { [weak self] value in
-                switch value {
-                case let .raw(action):
-                    self?.dispatch(raw: action)
-                case let .refined(action):
-                    self?.dispatch(refined: action)
-                }
+            .sink { [weak self] actions in
+                self?.dispatch(actions: actions)
             }
             .store(in: &cancellables)
 
         Publishers.Zip(
             _postMiddlewareRefinedActions,
             _allStateUpdates
-                .prepend(state)
                 .scan([]) { acc, item in .init((acc + [item]).suffix(2)) }
                 .filter { $0.count == 2 }
                 .map { ($0[0], $0[1]) }
@@ -63,11 +50,9 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
         .sink(receiveValue: _actionsPairedWithState.send)
         .store(in: &cancellables)
 
-        atomicPreMiddlewareRefinedActions
-            .publisher
-            .handleEvents(receiveOutput: { [weak self] in
-                self?._preMiddlewareRefinedActions.send($0)
-            })
+        var group = Optional(DispatchGroup())
+        group?.enter()
+        _preMiddlewareRefinedActions
             .flatMap { [weak self] actions in
                 self.publisher()
                     .flatMap { $0.$state.first() }
@@ -80,17 +65,13 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
                     }
                 }
             }
-            .sink(receiveValue: { [weak self] in
+            .handleEvents(receiveOutput: { [weak self] in
                 self?._postMiddlewareRefinedActions.send($0)
-                self?.atomicPostMiddlewareRefinedActions.append($0)
             })
-            .store(in: &cancellables)
-
-        atomicPostMiddlewareRefinedActions
-            .publisher
             .scan(state) { state, actions in
                 actions.reduce(state, reducer.reduce)
             }
+            .prepend(state)
             .receive(on: scheduler)
             .sink { [weak self] state in
                 guard let self = self else { return }
@@ -98,8 +79,11 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
                 if self.state != state {
                     self.state = state
                 }
+                group?.leave()
+                group = nil
             }
             .store(in: &cancellables)
+        group?.wait()
     }
 
     open var actions: AnyPublisher<Action, Never> {
@@ -136,9 +120,9 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
         actions.forEach {
             switch $0 {
             case let .raw(actions):
-                atomicRawActions.append(actions)
+                _rawActions.send(actions)
             case let .refined(actions):
-                atomicPreMiddlewareRefinedActions.append(actions)
+                _preMiddlewareRefinedActions.send(actions)
             }
         }
     }
