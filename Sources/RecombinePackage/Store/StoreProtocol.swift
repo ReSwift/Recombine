@@ -2,6 +2,8 @@ import Combine
 import SwiftUI
 
 public protocol StoreProtocol: ObservableObject, Subscriber {
+    typealias Action = ActionStrata<[RawAction], [SubRefinedAction]>
+    typealias Underlying = BaseStore<BaseState, RawAction, BaseRefinedAction>
     associatedtype BaseState: Equatable
     associatedtype SubState: Equatable
     associatedtype RawAction
@@ -9,11 +11,10 @@ public protocol StoreProtocol: ObservableObject, Subscriber {
     associatedtype SubRefinedAction
     var state: SubState { get }
     var statePublisher: Published<SubState>.Publisher { get }
-    var underlying: BaseStore<BaseState, RawAction, BaseRefinedAction> { get }
+    var underlying: Underlying { get }
     var stateLens: (BaseState) -> SubState { get }
     var actionPromotion: (SubRefinedAction) -> BaseRefinedAction { get }
-    func dispatch<S: Sequence>(raw: S) where S.Element == RawAction
-    func dispatch<S: Sequence>(refined: S) where S.Element == SubRefinedAction
+    func dispatch<S: Sequence>(actions: S) where S.Element == Action
     func eraseToAnyStore() -> AnyStore<BaseState, SubState, RawAction, BaseRefinedAction, SubRefinedAction>
 }
 
@@ -172,12 +173,39 @@ public extension StoreProtocol {
 }
 
 public extension StoreProtocol {
+    func dispatch<S: Sequence>(raw actions: S)
+        where S.Element == RawAction
+    {
+        dispatch(actions: .raw(.init(actions)))
+    }
+
+    func dispatch<S: Sequence>(refined actions: S)
+        where S.Element == SubRefinedAction
+    {
+        dispatch(actions: .refined(.init(actions)))
+    }
+
     func dispatch(refined actions: SubRefinedAction...) {
-        dispatch(refined: actions)
+        dispatch(actions: .refined(actions))
     }
 
     func dispatch(raw actions: RawAction...) {
-        dispatch(raw: actions)
+        dispatch(actions: .raw(actions))
+    }
+
+    func dispatch(actions: Action...) {
+        dispatch(actions: actions)
+    }
+
+    func dispatch<S: Sequence>(actions: S) where S.Element == Action {
+        underlying.dispatch(actions: actions.map {
+            switch $0 {
+            case let .refined(actions):
+                return .refined(actions.map(actionPromotion))
+            case let .raw(actions):
+                return .raw(actions)
+            }
+        })
     }
 
     func eraseToAnyStore() -> AnyStore<BaseState, SubState, RawAction, BaseRefinedAction, SubRefinedAction> {
@@ -196,13 +224,8 @@ public extension StoreProtocol {
         subscription.request(.unlimited)
     }
 
-    func receive(_ input: ActionStrata<RawAction, SubRefinedAction>) -> Subscribers.Demand {
-        switch input {
-        case let .raw(action):
-            dispatch(raw: action)
-        case let .refined(action):
-            dispatch(refined: action)
-        }
+    func receive(_ input: Action) -> Subscribers.Demand {
+        dispatch(actions: input)
         return .unlimited
     }
 

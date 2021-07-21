@@ -9,7 +9,6 @@ public class LensedStore<BaseState: Equatable, SubState: Equatable, RawAction, B
     public let stateLens: (BaseState) -> SubState
     public let actionPromotion: (SubRefinedAction) -> BaseRefinedAction
 
-    private let _actions = PassthroughSubject<[SubRefinedAction], Never>()
     private var cancellables = Set<AnyCancellable>()
 
     public required init(store: StoreType, lensing lens: @escaping (BaseState) -> SubState, actionPromotion: @escaping (SubRefinedAction) -> BaseRefinedAction) {
@@ -24,19 +23,6 @@ public class LensedStore<BaseState: Equatable, SubState: Equatable, RawAction, B
                 self.state = state
             }
             .store(in: &cancellables)
-    }
-
-    open var actions: AnyPublisher<[SubRefinedAction], Never> {
-        _actions.eraseToAnyPublisher()
-    }
-
-    open func dispatch<S: Sequence>(refined actions: S) where S.Element == SubRefinedAction {
-        _actions.send(.init(actions))
-        underlying.dispatch(refined: actions.map(actionPromotion))
-    }
-
-    open func dispatch<S: Sequence>(raw actions: S) where S.Element == RawAction {
-        underlying.dispatch(raw: actions)
     }
 }
 

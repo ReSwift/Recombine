@@ -25,12 +25,4 @@ public class AnyStore<BaseState: Equatable, SubState: Equatable, RawAction, Base
         }
         .store(in: &cancellables)
     }
-
-    public func dispatch<S: Sequence>(refined actions: S) where S.Element == SubRefinedAction {
-        underlying.dispatch(refined: actions.map(actionPromotion))
-    }
-
-    public func dispatch<S: Sequence>(raw actions: S) where S.Element == RawAction {
-        underlying.dispatch(raw: actions)
-    }
 }

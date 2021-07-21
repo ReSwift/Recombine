@@ -1,4 +1,5 @@
 import Combine
+import CombineExpectations
 @testable import Recombine
 import XCTest
 
@@ -19,8 +20,14 @@ class ObservableStoreDispatchTests: XCTestCase {
     func testLiftingWorksAsExpected() {
         let subject = PassthroughSubject<StoreTestType.Action, Never>()
         store = BaseStore(state: TestFakes.IntTest.State(), reducer: reducer, middleware: .init(), publishOn: ImmediateScheduler.shared)
+        let recorder = store.recorder
+
         subject.subscribe(store)
         subject.send(.refined(.int(20)))
-        XCTAssertEqual(store.state.value, 20)
+
+        XCTAssertEqual(
+            try wait(for: recorder.next(), timeout: 1).value,
+            20
+        )
     }
 }

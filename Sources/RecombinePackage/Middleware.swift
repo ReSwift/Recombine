@@ -2,10 +2,11 @@ import Combine
 
 /// Middleware is a structure that allows you to transform refined actions, filter them, or add to them,
 /// Refined actions produced by Middleware are then forwarded to the main reducer.
-public struct Middleware<State, Action> {
+public struct Middleware<State, RawAction, RefinedAction> {
     /// A function to dispatch actions such that they flow through all of the `Middleware` again.
+    public typealias Action = ActionStrata<[RawAction], [RefinedAction]>
     public typealias Dispatch = (Action...) -> Void
-    public typealias Function = (State, Action, Dispatch) -> [Action]
+    public typealias Function = (State, RefinedAction, Dispatch) -> [RefinedAction]
     internal let transform: Function
 
     /// Create a passthrough Middleware.
@@ -21,8 +22,8 @@ public struct Middleware<State, Action> {
     /// Initialises the middleware with a transformative function.
     /// - parameter transform: The function that will be able to modify passed actions.
     public init<S: Sequence>(
-        _ transform: @escaping (State, Action, Dispatch) -> S
-    ) where S.Element == Action {
+        _ transform: @escaping (State, RefinedAction, Dispatch) -> S
+    ) where S.Element == RefinedAction {
         self.transform = { .init(transform($0, $1, $2)) }
     }
 

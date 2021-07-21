@@ -8,7 +8,7 @@ class StoreMiddlewareTests: XCTestCase {
     /**
      it can decorate dispatch function
      */
-    func testDecorateMiddlewareDispatch() {
+    func testDecorateMiddlewareDispatch() throws {
         let store = BaseStore(
             state: TestFakes.StringTest.State(),
             reducer: TestFakes.StringTest.reducer,
@@ -16,22 +16,26 @@ class StoreMiddlewareTests: XCTestCase {
             thunk: .init(),
             publishOn: ImmediateScheduler.shared
         )
-        let action = TestFakes.SetAction.string("OK")
-        store.dispatch(refined: [])
-        store.dispatch(refined: action)
 
-        XCTAssertEqual(store.state.value, "OK First Middleware Second Middleware")
+        try nextEquals(
+            store,
+            actions: [
+                .refined(.string("OK")),
+            ],
+            keyPath: \.value,
+            value: "OK First Middleware Second Middleware"
+        )
     }
 
     /**
      it reruns for dispatching
      */
     func testRedispatch() throws {
-        let middleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction> { _, action, dispatch -> [TestFakes.SetAction] in
+        let middleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction, TestFakes.SetAction> { _, action, dispatch -> [TestFakes.SetAction] in
             switch action {
             case let .string(value):
                 if !value.contains("Middleware") {
-                    dispatch(.string(value + " Middleware"))
+                    dispatch(.refined(.string(value + " Middleware")))
                     return []
                 }
             default:
@@ -46,19 +50,21 @@ class StoreMiddlewareTests: XCTestCase {
             thunk: .init(),
             publishOn: ImmediateScheduler.shared
         )
-        let recorder = store.$state.dropFirst().record()
 
-        store.dispatch(refined: .string("OK"))
-
-        let value = try wait(for: recorder.next(), timeout: 1)
-
-        XCTAssertEqual(value.value, "OK Middleware")
+        try nextEquals(
+            store,
+            actions: [
+                .refined(.string("OK")),
+            ],
+            keyPath: \.value,
+            value: "OK Middleware"
+        )
     }
 
     /**
      it can decorate dispatch function
      */
-    func testDecorateThunkDispatch() {
+    func testDecorateThunkDispatch() throws {
         let store = BaseStore(
             state: TestFakes.StringTest.State(),
             reducer: TestFakes.StringTest.reducer,
@@ -66,16 +72,22 @@ class StoreMiddlewareTests: XCTestCase {
             thunk: thunk,
             publishOn: ImmediateScheduler.shared
         )
-        store.dispatch(raw: .first("OK"))
 
-        XCTAssertEqual(store.state.value, "OK First Thunk Second Thunk")
+        try nextEquals(
+            store,
+            actions: [
+                .raw(.first("OK")),
+            ],
+            keyPath: \.value,
+            value: "OK First Thunk Second Thunk"
+        )
     }
 
     /**
      it actions should be multiplied via the increase function
      */
-    func testMiddlewareMultiplies() {
-        let multiplexingMiddleware = Middleware<TestFakes.CounterTest.State, TestFakes.SetAction> { _, action, _ in
+    func testMiddlewareMultiplies() throws {
+        let multiplexingMiddleware = Middleware<TestFakes.CounterTest.State, TestFakes.SetAction, TestFakes.SetAction> { _, action, _ in
             Array(repeating: action, count: 3)
         }
         let store = BaseStore(
@@ -85,14 +97,21 @@ class StoreMiddlewareTests: XCTestCase {
             thunk: .init(),
             publishOn: ImmediateScheduler.shared
         )
-        store.dispatch(refined: .noop)
-        XCTAssertEqual(store.state.count, 3)
+
+        try nextEquals(
+            store,
+            actions: [
+                .refined(.noop),
+            ],
+            keyPath: \.count,
+            value: 3
+        )
     }
 
     /**
      it actions should be multiplied via the increase function
      */
-    func testThunkMultiplies() {
+    func testThunkMultiplies() throws {
         let multiplexingThunk = Thunk<TestFakes.CounterTest.State, TestFakes.SetAction, TestFakes.SetAction> {
             [$1, $1, $1].publisher.map { .refined($0) }
         }
@@ -102,7 +121,15 @@ class StoreMiddlewareTests: XCTestCase {
             thunk: multiplexingThunk,
             publishOn: ImmediateScheduler.shared
         )
-        store.dispatch(raw: .noop)
-        XCTAssertEqual(store.state.count, 3)
+
+        try nextEquals(
+            store,
+            dropFirst: 2,
+            actions: [
+                .raw(.noop),
+            ],
+            keyPath: \.count,
+            value: 3
+        )
     }
 }
