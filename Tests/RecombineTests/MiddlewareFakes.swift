@@ -26,7 +26,7 @@ let stateAccessingMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.
     return [action]
 }
 
-let thunk = Thunk<TestFakes.StringTest.State, TestFakes.ThunkRawAction, TestFakes.SetAction> { _, action -> Just<ActionStrata<TestFakes.ThunkRawAction, TestFakes.SetAction>> in
+let thunk = Thunk<TestFakes.StringTest.State, TestFakes.ThunkRawAction, TestFakes.SetAction> { _, action -> Just<ActionStrata<[TestFakes.ThunkRawAction], [TestFakes.SetAction]>> in
     switch action {
     case let .first(value):
         return Just(.raw(.second(value + " First Thunk")))
@@ -35,7 +35,7 @@ let thunk = Thunk<TestFakes.StringTest.State, TestFakes.ThunkRawAction, TestFake
     }
 }
 
-let stateAccessingThunk = Thunk<TestFakes.StringTest.State, TestFakes.SetAction, TestFakes.SetAction> { state, action -> AnyPublisher<ActionStrata<TestFakes.SetAction, TestFakes.SetAction>, Never> in
+let stateAccessingThunk = Thunk<TestFakes.StringTest.State, TestFakes.SetAction, TestFakes.SetAction> { state, action -> AnyPublisher<ActionStrata<[TestFakes.SetAction], [TestFakes.SetAction]>, Never> in
     if case let .string(value) = action {
         return state.map {
             .refined(.string($0.value! + $0.value!))

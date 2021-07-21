@@ -37,7 +37,8 @@ import Combine
 
 public struct Thunk<State, Input, Output> {
     public typealias StatePublisher = Publishers.First<Published<State>.Publisher>
-    public typealias Function = (StatePublisher, Input) -> AnyPublisher<ActionStrata<Input, Output>, Never>
+    public typealias Action = ActionStrata<[Input], [Output]>
+    public typealias Function = (StatePublisher, Input) -> AnyPublisher<Action, Never>
     internal let transform: Function
 
     /// Create an empty passthrough `Thunk.`
@@ -80,7 +81,7 @@ public struct Thunk<State, Input, Output> {
     /// For a more detailed explanation, go to the `Middleware` documentation.
     public init<P: Publisher>(
         _ transform: @escaping (StatePublisher, Input) -> P
-    ) where P.Output == ActionStrata<Input, Output>, P.Failure == Never {
+    ) where P.Output == Action, P.Failure == Never {
         self.transform = { transform($0, $1).eraseToAnyPublisher() }
     }
 }
