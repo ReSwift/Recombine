@@ -76,10 +76,12 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
                     actions.reduce(state, reducer.reduce)
                 }
                 .prepend(state)
-                .receive(on: scheduler)
-                .sink(receiveValue: { [weak self] state in
+                .handleEvents(receiveOutput: { _ in
                     group?.leave()
                     group = nil
+                })
+                .receive(on: scheduler)
+                .sink(receiveValue: { [weak self] state in
                     guard let self = self else { return }
                     self._allStateUpdates.send(state)
                     if self.state != state {
