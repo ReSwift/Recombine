@@ -1,4 +1,5 @@
 import Combine
+import Foundation
 
 public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtocol {
     public typealias SubState = State
@@ -28,11 +29,17 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
     ) where R.State == State, R.Action == RefinedAction {
         self.state = state
 
+        let group = DispatchGroup()
+
+        group.enter()
         _rawActions.flatMap { [weak self] action in
             self.publisher().flatMap {
                 thunk.transform($0.$state.first(), action)
             }
         }
+        .handleEvents(receiveSubscription: { _ in
+            group.leave()
+        })
         .sink { [weak self] value in
             switch value {
             case let .raw(action):
@@ -54,6 +61,7 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
         .sink(receiveValue: _actionsPairedWithState.send)
         .store(in: &cancellables)
 
+        group.enter()
         _preMiddlewareRefinedActions
             .flatMap { [weak self] actions in
                 self.publisher()
@@ -65,16 +73,23 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
                     middleware.transform(previousState, $0) { self?.dispatch(refined: $0) }
                 }
             }
+            .handleEvents(receiveSubscription: { _ in
+                group.leave()
+            })
             .sink(receiveValue: { [weak self] actions in
                 self?._postMiddlewareRefinedActions.send(actions)
             })
             .store(in: &cancellables)
 
+        group.enter()
         _postMiddlewareRefinedActions
             .scan(state) { state, actions in
                 actions.reduce(state, reducer.reduce)
             }
             .receive(on: scheduler)
+            .handleEvents(receiveSubscription: { _ in
+                group.leave()
+            })
             .sink { [weak self] state in
                 guard let self = self else { return }
                 self._allStateUpdates.send(state)
@@ -83,6 +98,8 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
                 }
             }
             .store(in: &cancellables)
+
+        group.wait()
     }
 
     open var actions: AnyPublisher<Action, Never> {
