@@ -122,14 +122,14 @@ class StoreMiddlewareTests: XCTestCase {
             publishOn: ImmediateScheduler.shared
         )
 
-        try nextEquals(
+        try prefixEquals(
             store,
-            dropFirst: 2,
+            count: 3,
             actions: [
                 .raw(.noop),
             ],
             keyPath: \.count,
-            value: 3
+            values: [1, 2, 3]
         )
     }
 }

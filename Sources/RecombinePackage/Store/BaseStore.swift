@@ -39,7 +39,11 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
                 .filter { $0.count == 2 }
                 .map { ($0[0], $0[1]) }
         )
-        .sink(receiveValue: _actionsPairedWithState.send)
+        .forward(
+            to: \._actionsPairedWithState,
+            on: self,
+            ownership: .weak
+        )
         .store(in: &cancellables)
 
         _preMiddlewareRefinedActions
@@ -55,9 +59,11 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
                     }
                 }
             }
-            .sink(receiveValue: { [weak self] in
-                self?._postMiddlewareRefinedActions.send($0)
-            })
+            .forward(
+                to: \._postMiddlewareRefinedActions,
+                on: self,
+                ownership: .weak
+            )
             .store(in: &cancellables)
 
         var group = Optional(DispatchGroup())
@@ -115,39 +121,21 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
         _actionsPairedWithState.eraseToAnyPublisher()
     }
 
-    open func dispatch<S: Sequence>(actions: S) where S.Element == Action {
-        actions.forEach {
-            switch $0 {
-            case let .raw(actions):
-                _rawActions.send(actions)
-                actions.publisher
-                    .flatMap { [weak self] action in
-                        self.publisher().flatMap {
-                            $0.thunk.transform($0.$state.first(), action)
-                        }
-                    }
-                    .sink { [weak self] actions in
-                        self?.dispatch(actions: actions)
-                    }
-                    .store(in: &cancellables)
-            case let .refined(actions):
-                _preMiddlewareRefinedActions.send(actions)
-            }
-        }
-    }
+    open func dispatch<S: Sequence>(serially: Bool = false, actions: S) where S.Element == Action {
+        let maxPublishers: Subscribers.Demand = serially ? .max(1) : .unlimited
+        weak var `self` = self
 
-    open func dispatchSerially<S: Sequence>(actions: S) where S.Element == Action {
         func reduce(actions: Action) -> AnyPublisher<[RefinedAction], Never> {
             switch actions {
             case let .raw(actions):
-                _rawActions.send(actions)
+                self?._rawActions.send(actions)
                 return actions.publisher
-                    .flatMap(maxPublishers: .max(1)) { [weak self] action in
+                    .flatMap(maxPublishers: maxPublishers) { [weak self] action in
                         self.publisher().flatMap {
                             $0.thunk.transform($0.$state.first(), action)
                         }
                     }
-                    .flatMap(maxPublishers: .max(1), reduce(actions:))
+                    .flatMap(maxPublishers: maxPublishers, reduce(actions:))
                     .eraseToAnyPublisher()
             case let .refined(actions):
                 return Just(actions).eraseToAnyPublisher()
@@ -156,8 +144,8 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
 
         actions
             .publisher
-            .flatMap(maxPublishers: .max(1), reduce(actions:))
-            .sink { [weak self] in
+            .flatMap(maxPublishers: maxPublishers, reduce(actions:))
+            .sink {
                 self?._preMiddlewareRefinedActions.send($0)
             }
             .store(in: &cancellables)

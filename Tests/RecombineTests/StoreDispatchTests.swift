@@ -70,11 +70,12 @@ class ObservableStoreDispatchTests: XCTestCase {
         let rawActionsRecorder = store.rawActions.record()
         let refinedActionsRecorder = store.postMiddlewareRefinedActions.record()
 
-        try nextEquals(
+        try prefixEquals(
             store,
-            dropFirst: 8,
+            count: 9,
             timeout: 10,
-            serialActions: [
+            serially: true,
+            actions: [
                 .raw(.addTwice("5")),
                 .refined(["0", "0"]),
                 .raw(.addThrice("6")),
@@ -82,7 +83,17 @@ class ObservableStoreDispatchTests: XCTestCase {
                 .refined("1"),
             ],
             keyPath: \.self,
-            value: "5500666221"
+            values: [
+                "5",
+                "55",
+                "5500",
+                "55006",
+                "550066",
+                "5500666",
+                "55006662",
+                "550066622",
+                "5500666221",
+            ]
         )
 
         let rawExpectation: [RawAction] = [.addTwice("5"), .addThrice("6"), .addTwice("6"), .addTwice("2")]

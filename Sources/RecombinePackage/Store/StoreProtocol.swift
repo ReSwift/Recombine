@@ -14,8 +14,7 @@ public protocol StoreProtocol: ObservableObject, Subscriber {
     var underlying: Underlying { get }
     var stateLens: (BaseState) -> SubState { get }
     var actionPromotion: (SubRefinedAction) -> BaseRefinedAction { get }
-    func dispatch<S: Sequence>(actions: S) where S.Element == Action
-    func dispatchSerially<S: Sequence>(actions: S) where S.Element == Action
+    func dispatch<S: Sequence>(serially: Bool, actions: S) where S.Element == Action
     func eraseToAnyStore() -> AnyStore<BaseState, SubState, RawAction, BaseRefinedAction, SubRefinedAction>
 }
 
@@ -174,7 +173,7 @@ public extension StoreProtocol {
 }
 
 public extension StoreProtocol {
-    func dispatch<S: Sequence>(actions: S) where S.Element == Action {
+    func dispatch<S: Sequence>(serially _: Bool, actions: S) where S.Element == Action {
         underlying.dispatch(actions: actions.map {
             switch $0 {
             case let .refined(actions):
@@ -185,12 +184,16 @@ public extension StoreProtocol {
         })
     }
 
-    func dispatch(actions: Action...) {
-        dispatch(actions: actions)
+    func dispatch(serially: Bool = false, actions: Action...) {
+        dispatch(serially: serially, actions: actions)
     }
 
-    func dispatch<S: Sequence>(raw actions: S) where S.Element == RawAction {
+    func dispatch<S: Sequence>(serially _: Bool = false, raw actions: S) where S.Element == RawAction {
         dispatch(actions: .raw(.init(actions)))
+    }
+
+    func dispatch(serially: Bool = false, raw actions: RawAction...) {
+        dispatch(serially: serially, actions: .raw(actions))
     }
 
     func dispatch<S: Sequence>(refined actions: S)
@@ -201,35 +204,6 @@ public extension StoreProtocol {
 
     func dispatch(refined actions: SubRefinedAction...) {
         dispatch(actions: .refined(actions))
-    }
-
-    func dispatch(raw actions: RawAction...) {
-        dispatch(actions: .raw(actions))
-    }
-}
-
-public extension StoreProtocol {
-    func dispatchSerially<S: Sequence>(actions: S) where S.Element == Action {
-        underlying.dispatchSerially(actions: actions.map {
-            switch $0 {
-            case let .refined(actions):
-                return .refined(actions.map(actionPromotion))
-            case let .raw(actions):
-                return .raw(actions)
-            }
-        })
-    }
-
-    func dispatchSerially(actions: Action...) {
-        dispatchSerially(actions: actions)
-    }
-
-    func dispatchSerially<S: Sequence>(raw actions: S) where S.Element == RawAction {
-        dispatchSerially(actions: .raw(.init(actions)))
-    }
-
-    func dispatchSerially(raw actions: RawAction...) {
-        dispatchSerially(actions: .raw(actions))
     }
 }
 
