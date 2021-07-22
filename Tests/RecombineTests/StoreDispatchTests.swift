@@ -32,7 +32,7 @@ class ObservableStoreDispatchTests: XCTestCase {
     }
 
     func testSerialDispatch() throws {
-        enum RawAction {
+        enum RawAction: Equatable {
             case addTwice(String)
             case addThrice(String)
         }
@@ -60,7 +60,6 @@ class ObservableStoreDispatchTests: XCTestCase {
         let reducer: MutatingReducer<String, String> = .init { state, action in
             state += action
         }
-
         let store = BaseStore(
             state: "",
             reducer: reducer,
@@ -68,19 +67,34 @@ class ObservableStoreDispatchTests: XCTestCase {
             publishOn: ImmediateScheduler.shared
         )
 
+        let rawActionsRecorder = store.rawActions.record()
+        let refinedActionsRecorder = store.postMiddlewareRefinedActions.record()
+
         try nextEquals(
             store,
             dropFirst: 8,
             timeout: 10,
             serialActions: [
                 .raw(.addTwice("5")),
-                .refined("0"),
+                .refined(["0", "0"]),
                 .raw(.addThrice("6")),
                 .raw(.addTwice("2")),
                 .refined("1"),
             ],
             keyPath: \.self,
-            value: "550666221"
+            value: "5500666221"
+        )
+
+        let rawExpectation: [RawAction] = [.addTwice("5"), .addThrice("6"), .addTwice("6"), .addTwice("2")]
+        XCTAssertEqual(
+            try wait(for: rawActionsRecorder.prefix(rawExpectation.count), timeout: 10).flatMap { $0 },
+            rawExpectation
+        )
+
+        let refinedExpectation = [["5"], ["5"], ["0", "0"], ["6"], ["6"], ["6"], ["2"], ["2"], ["1"]]
+        XCTAssertEqual(
+            try wait(for: refinedActionsRecorder.prefix(refinedExpectation.count), timeout: 10),
+            refinedExpectation
         )
     }
 }

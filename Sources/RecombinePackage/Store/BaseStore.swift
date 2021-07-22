@@ -32,18 +32,6 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
         self.state = state
         self.thunk = thunk
 
-        _rawActions
-            .flatMap(\.publisher)
-            .flatMap { [weak self] action in
-                self.publisher().flatMap {
-                    thunk.transform($0.$state.first(), action)
-                }
-            }
-            .sink { [weak self] actions in
-                self?.dispatch(actions: actions)
-            }
-            .store(in: &cancellables)
-
         Publishers.Zip(
             _postMiddlewareRefinedActions,
             _allStateUpdates
@@ -132,6 +120,16 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
             switch $0 {
             case let .raw(actions):
                 _rawActions.send(actions)
+                actions.publisher
+                    .flatMap { [weak self] action in
+                        self.publisher().flatMap {
+                            $0.thunk.transform($0.$state.first(), action)
+                        }
+                    }
+                    .sink { [weak self] actions in
+                        self?.dispatch(actions: actions)
+                    }
+                    .store(in: &cancellables)
             case let .refined(actions):
                 _preMiddlewareRefinedActions.send(actions)
             }
@@ -139,36 +137,28 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
     }
 
     open func dispatchSerially<S: Sequence>(actions: S) where S.Element == Action {
-        func reduce(actions: [RawAction]) -> AnyPublisher<[RefinedAction], Never> {
-            actions.publisher
-                .flatMap(maxPublishers: .max(1)) { [weak self] action in
-                    self.publisher().flatMap {
-                        $0.thunk.transform($0.$state.first(), action)
+        func reduce(actions: Action) -> AnyPublisher<[RefinedAction], Never> {
+            switch actions {
+            case let .raw(actions):
+                _rawActions.send(actions)
+                return actions.publisher
+                    .flatMap(maxPublishers: .max(1)) { [weak self] action in
+                        self.publisher().flatMap {
+                            $0.thunk.transform($0.$state.first(), action)
+                        }
                     }
-                }
-                .flatMap(maxPublishers: .max(1)) { action -> AnyPublisher<[RefinedAction], Never> in
-                    switch action {
-                    case let .raw(actions):
-                        return reduce(actions: actions)
-                    case let .refined(actions):
-                        return Just(actions).eraseToAnyPublisher()
-                    }
-                }
-                .eraseToAnyPublisher()
+                    .flatMap(maxPublishers: .max(1), reduce(actions:))
+                    .eraseToAnyPublisher()
+            case let .refined(actions):
+                return Just(actions).eraseToAnyPublisher()
+            }
         }
 
         actions
             .publisher
-            .flatMap(maxPublishers: .max(1)) { actions -> AnyPublisher<[RefinedAction], Never> in
-                switch actions {
-                case let .raw(actions):
-                    return reduce(actions: actions)
-                case let .refined(actions):
-                    return Just(actions).eraseToAnyPublisher()
-                }
-            }
+            .flatMap(maxPublishers: .max(1), reduce(actions:))
             .sink { [weak self] in
-                self?.dispatch(refined: $0)
+                self?._preMiddlewareRefinedActions.send($0)
             }
             .store(in: &cancellables)
     }
