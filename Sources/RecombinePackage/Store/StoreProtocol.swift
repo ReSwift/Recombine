@@ -174,9 +174,22 @@ public extension StoreProtocol {
 }
 
 public extension StoreProtocol {
-    func dispatch<S: Sequence>(raw actions: S)
-        where S.Element == RawAction
-    {
+    func dispatch<S: Sequence>(actions: S) where S.Element == Action {
+        underlying.dispatch(actions: actions.map {
+            switch $0 {
+            case let .refined(actions):
+                return .refined(actions.map(actionPromotion))
+            case let .raw(actions):
+                return .raw(actions)
+            }
+        })
+    }
+
+    func dispatch(actions: Action...) {
+        dispatch(actions: actions)
+    }
+
+    func dispatch<S: Sequence>(raw actions: S) where S.Element == RawAction {
         dispatch(actions: .raw(.init(actions)))
     }
 
@@ -193,22 +206,9 @@ public extension StoreProtocol {
     func dispatch(raw actions: RawAction...) {
         dispatch(actions: .raw(actions))
     }
+}
 
-    func dispatch(actions: Action...) {
-        dispatch(actions: actions)
-    }
-
-    func dispatch<S: Sequence>(actions: S) where S.Element == Action {
-        underlying.dispatch(actions: actions.map {
-            switch $0 {
-            case let .refined(actions):
-                return .refined(actions.map(actionPromotion))
-            case let .raw(actions):
-                return .raw(actions)
-            }
-        })
-    }
-
+public extension StoreProtocol {
     func dispatchSerially<S: Sequence>(actions: S) where S.Element == Action {
         underlying.dispatchSerially(actions: actions.map {
             switch $0 {
@@ -220,6 +220,20 @@ public extension StoreProtocol {
         })
     }
 
+    func dispatchSerially(actions: Action...) {
+        dispatchSerially(actions: actions)
+    }
+
+    func dispatchSerially<S: Sequence>(raw actions: S) where S.Element == RawAction {
+        dispatchSerially(actions: .raw(.init(actions)))
+    }
+
+    func dispatchSerially(raw actions: RawAction...) {
+        dispatchSerially(actions: .raw(actions))
+    }
+}
+
+public extension StoreProtocol {
     func eraseToAnyStore() -> AnyStore<BaseState, SubState, RawAction, BaseRefinedAction, SubRefinedAction> {
         AnyStore(self)
     }
