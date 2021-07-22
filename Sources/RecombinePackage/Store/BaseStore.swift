@@ -4,6 +4,8 @@ import Foundation
 public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtocol {
     public typealias SubState = State
     public typealias SubRefinedAction = RefinedAction
+    // Necessary due to a bug in the compiler.
+    public typealias Action = ActionStrata<[RawAction], [SubRefinedAction]>
     public typealias ActionsAndState = ([RefinedAction], (previous: State, current: State))
     @Published
     public private(set) var state: State
@@ -125,9 +127,7 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
         _actionsPairedWithState.eraseToAnyPublisher()
     }
 
-    open func dispatch<S: Sequence>(actions: S)
-        where S.Element == ActionStrata<[RawAction], [SubRefinedAction]>
-    {
+    open func dispatch<S: Sequence>(actions: S) where S.Element == Action {
         actions.forEach {
             switch $0 {
             case let .raw(actions):
@@ -138,9 +138,7 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
         }
     }
 
-    open func dispatchSerially<S: Sequence>(actions: S)
-        where S.Element == ActionStrata<[RawAction], [RefinedAction]>
-    {
+    open func dispatchSerially<S: Sequence>(actions: S) where S.Element == Action {
         func reduce(actions: [RawAction]) -> AnyPublisher<[RefinedAction], Never> {
             actions.publisher
                 .flatMap(maxPublishers: .max(1)) { [weak self] action in

@@ -44,7 +44,7 @@ class ObservableStoreDispatchTests: XCTestCase {
                 return Just(value)
                     .append(
                         Just(value)
-                            .delay(for: .seconds(0.1), scheduler: DispatchQueue.global())
+                            .delay(for: .seconds(0.1), scheduler: DispatchQueue.main)
                     )
                     .map { .refined($0) }
                     .eraseToAnyPublisher()
@@ -52,7 +52,7 @@ class ObservableStoreDispatchTests: XCTestCase {
                 return Just(.raw(.addTwice(value)))
                     .append(
                         Just(.refined(value))
-                            .delay(for: .seconds(0.1), scheduler: DispatchQueue.global())
+                            .delay(for: .seconds(0.1), scheduler: DispatchQueue.main)
                     )
                     .eraseToAnyPublisher()
             }
@@ -65,7 +65,7 @@ class ObservableStoreDispatchTests: XCTestCase {
             state: "",
             reducer: reducer,
             thunk: thunk,
-            publishOn: DispatchQueue.global()
+            publishOn: ImmediateScheduler.shared
         )
 
         try nextEquals(
