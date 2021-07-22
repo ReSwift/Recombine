@@ -30,4 +30,57 @@ class ObservableStoreDispatchTests: XCTestCase {
             20
         )
     }
+
+    func testSerialDispatch() throws {
+        enum RawAction {
+            case addTwice(String)
+            case addThrice(String)
+        }
+
+        let thunk = Thunk<String, RawAction, String> { _, action -> AnyPublisher
+            <ActionStrata<[RawAction], [String]>, Never> in
+            switch action {
+            case let .addTwice(value):
+                return Just(value)
+                    .append(
+                        Just(value)
+                            .delay(for: .seconds(0.1), scheduler: DispatchQueue.global())
+                    )
+                    .map { .refined($0) }
+                    .eraseToAnyPublisher()
+            case let .addThrice(value):
+                return Just(.raw(.addTwice(value)))
+                    .append(
+                        Just(.refined(value))
+                            .delay(for: .seconds(0.1), scheduler: DispatchQueue.global())
+                    )
+                    .eraseToAnyPublisher()
+            }
+        }
+        let reducer: MutatingReducer<String, String> = .init { state, action in
+            state += action
+        }
+
+        let store = BaseStore(
+            state: "",
+            reducer: reducer,
+            thunk: thunk,
+            publishOn: DispatchQueue.global()
+        )
+
+        try nextEquals(
+            store,
+            dropFirst: 8,
+            timeout: 10,
+            serialActions: [
+                .raw(.addTwice("5")),
+                .refined("0"),
+                .raw(.addThrice("6")),
+                .raw(.addTwice("2")),
+                .refined("1"),
+            ],
+            keyPath: \.self,
+            value: "550666221"
+        )
+    }
 }

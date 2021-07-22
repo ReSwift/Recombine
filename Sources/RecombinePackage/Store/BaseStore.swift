@@ -12,6 +12,7 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
     public let stateLens: (State) -> State = { $0 }
     public let actionPromotion: (RefinedAction) -> RefinedAction = { $0 }
 
+    private let thunk: Thunk<State, RawAction, RefinedAction>
     private let _rawActions = PassthroughSubject<[RawAction], Never>()
     private let _preMiddlewareRefinedActions = PassthroughSubject<[RefinedAction], Never>()
     private let _postMiddlewareRefinedActions = PassthroughSubject<[RefinedAction], Never>()
@@ -27,6 +28,7 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
         publishOn scheduler: S
     ) where R.State == State, R.Action == RefinedAction {
         self.state = state
+        self.thunk = thunk
 
         _rawActions
             .flatMap(\.publisher)
@@ -134,6 +136,43 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
                 _preMiddlewareRefinedActions.send(actions)
             }
         }
+    }
+
+    open func dispatchSerially<S: Sequence>(actions: S)
+        where S.Element == ActionStrata<[RawAction], [RefinedAction]>
+    {
+        func reduce(actions: [RawAction]) -> AnyPublisher<[RefinedAction], Never> {
+            actions.publisher
+                .flatMap(maxPublishers: .max(1)) { [weak self] action in
+                    self.publisher().flatMap {
+                        $0.thunk.transform($0.$state.first(), action)
+                    }
+                }
+                .flatMap(maxPublishers: .max(1)) { action -> AnyPublisher<[RefinedAction], Never> in
+                    switch action {
+                    case let .raw(actions):
+                        return reduce(actions: actions)
+                    case let .refined(actions):
+                        return Just(actions).eraseToAnyPublisher()
+                    }
+                }
+                .eraseToAnyPublisher()
+        }
+
+        actions
+            .publisher
+            .flatMap(maxPublishers: .max(1)) { actions -> AnyPublisher<[RefinedAction], Never> in
+                switch actions {
+                case let .raw(actions):
+                    return reduce(actions: actions)
+                case let .refined(actions):
+                    return Just(actions).eraseToAnyPublisher()
+                }
+            }
+            .sink { [weak self] in
+                self?.dispatch(refined: $0)
+            }
+            .store(in: &cancellables)
     }
 
     open func injectBypassingMiddleware<S: Sequence>(actions: S) where S.Element == RefinedAction {

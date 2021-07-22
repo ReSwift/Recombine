@@ -15,6 +15,7 @@ public protocol StoreProtocol: ObservableObject, Subscriber {
     var stateLens: (BaseState) -> SubState { get }
     var actionPromotion: (SubRefinedAction) -> BaseRefinedAction { get }
     func dispatch<S: Sequence>(actions: S) where S.Element == Action
+    func dispatchSerially<S: Sequence>(actions: S) where S.Element == Action
     func eraseToAnyStore() -> AnyStore<BaseState, SubState, RawAction, BaseRefinedAction, SubRefinedAction>
 }
 
@@ -199,6 +200,17 @@ public extension StoreProtocol {
 
     func dispatch<S: Sequence>(actions: S) where S.Element == Action {
         underlying.dispatch(actions: actions.map {
+            switch $0 {
+            case let .refined(actions):
+                return .refined(actions.map(actionPromotion))
+            case let .raw(actions):
+                return .raw(actions)
+            }
+        })
+    }
+
+    func dispatchSerially<S: Sequence>(actions: S) where S.Element == Action {
+        underlying.dispatchSerially(actions: actions.map {
             switch $0 {
             case let .refined(actions):
                 return .refined(actions.map(actionPromotion))
