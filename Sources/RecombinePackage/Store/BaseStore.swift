@@ -42,7 +42,8 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
         .forward(
             to: \._actionsPairedWithState,
             on: self,
-            ownership: .weak
+            ownership: .weak,
+            includeFinished: true
         )
         .store(in: &cancellables)
 
@@ -62,7 +63,8 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
             .forward(
                 to: \._postMiddlewareRefinedActions,
                 on: self,
-                ownership: .weak
+                ownership: .weak,
+                includeFinished: true
             )
             .store(in: &cancellables)
 

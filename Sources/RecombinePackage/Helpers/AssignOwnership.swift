@@ -52,26 +52,48 @@ public extension Publisher {
     func forward<Root: AnyObject, S: Subject>(
         to keyPath: KeyPath<Root, S>,
         on object: Root,
-        ownership: ObjectOwnership
+        ownership: ObjectOwnership,
+        includeFinished: Bool
     ) -> AnyCancellable
         where S.Output == Output, S.Failure == Failure
     {
         switch ownership {
         case .strong:
             return sink {
-                object[keyPath: keyPath].send(completion: $0)
+                switch $0 {
+                case .failure:
+                    object[keyPath: keyPath].send(completion: $0)
+                case .finished:
+                    if includeFinished {
+                        object[keyPath: keyPath].send(completion: $0)
+                    }
+                }
             } receiveValue: {
                 object[keyPath: keyPath].send($0)
             }
         case .weak:
             return sink { [weak object] in
-                object?[keyPath: keyPath].send(completion: $0)
+                switch $0 {
+                case .failure:
+                    object?[keyPath: keyPath].send(completion: $0)
+                case .finished:
+                    if includeFinished {
+                        object?[keyPath: keyPath].send(completion: $0)
+                    }
+                }
             } receiveValue: { [weak object] in
                 object?[keyPath: keyPath].send($0)
             }
         case .unowned:
             return sink { [unowned object] in
-                object[keyPath: keyPath].send(completion: $0)
+                switch $0 {
+                case .failure:
+                    object[keyPath: keyPath].send(completion: $0)
+                case .finished:
+                    if includeFinished {
+                        object[keyPath: keyPath].send(completion: $0)
+                    }
+                }
             } receiveValue: {
                 object[keyPath: keyPath].send($0)
             }
@@ -81,7 +103,8 @@ public extension Publisher {
     func forward<Root1: AnyObject, Root2: AnyObject, S1: Subject, S2: Subject>(
         to keyPath1: KeyPath<Root1, S1>, on object1: Root1,
         and keyPath2: KeyPath<Root2, S2>, on object2: Root2,
-        ownership: ObjectOwnership
+        ownership: ObjectOwnership,
+        includeFinished: Bool
     ) -> AnyCancellable
         where S1.Output == Output, S1.Failure == Failure,
         S2.Output == Output, S2.Failure == Failure
@@ -89,24 +112,48 @@ public extension Publisher {
         switch ownership {
         case .strong:
             return sink {
-                object1[keyPath: keyPath1].send(completion: $0)
-                object2[keyPath: keyPath2].send(completion: $0)
+                switch $0 {
+                case .failure:
+                    object1[keyPath: keyPath1].send(completion: $0)
+                    object2[keyPath: keyPath2].send(completion: $0)
+                case .finished:
+                    if includeFinished {
+                        object1[keyPath: keyPath1].send(completion: $0)
+                        object2[keyPath: keyPath2].send(completion: $0)
+                    }
+                }
             } receiveValue: {
                 object1[keyPath: keyPath1].send($0)
                 object2[keyPath: keyPath2].send($0)
             }
         case .weak:
             return sink { [weak object1, weak object2] in
-                object1?[keyPath: keyPath1].send(completion: $0)
-                object2?[keyPath: keyPath2].send(completion: $0)
+                switch $0 {
+                case .failure:
+                    object1?[keyPath: keyPath1].send(completion: $0)
+                    object2?[keyPath: keyPath2].send(completion: $0)
+                case .finished:
+                    if includeFinished {
+                        object1?[keyPath: keyPath1].send(completion: $0)
+                        object2?[keyPath: keyPath2].send(completion: $0)
+                    }
+                }
             } receiveValue: { [weak object1, weak object2] in
                 object1?[keyPath: keyPath1].send($0)
                 object2?[keyPath: keyPath2].send($0)
             }
         case .unowned:
             return sink { [unowned object1, unowned object2] in
-                object1[keyPath: keyPath1].send(completion: $0)
-                object2[keyPath: keyPath2].send(completion: $0)
+                switch $0 {
+                case .failure:
+                    object1[keyPath: keyPath1].send(completion: $0)
+                    object2[keyPath: keyPath2].send(completion: $0)
+                case .finished:
+                    if includeFinished {
+                        object1[keyPath: keyPath1].send(completion: $0)
+                        object2[keyPath: keyPath2].send(completion: $0)
+                    }
+                }
             } receiveValue: { [unowned object1, unowned object2] in
                 object1[keyPath: keyPath1].send($0)
                 object2[keyPath: keyPath2].send($0)
@@ -118,7 +165,8 @@ public extension Publisher {
         to keyPath1: KeyPath<Root1, S1>, on object1: Root1,
         and keyPath2: KeyPath<Root2, S2>, on object2: Root2,
         and keyPath3: KeyPath<Root3, S3>, on object3: Root3,
-        ownership: ObjectOwnership
+        ownership: ObjectOwnership,
+        includeFinished: Bool
     ) -> AnyCancellable
         where S1.Output == Output, S1.Failure == Failure,
         S2.Output == Output, S2.Failure == Failure,
@@ -127,9 +175,18 @@ public extension Publisher {
         switch ownership {
         case .strong:
             return sink {
-                object1[keyPath: keyPath1].send(completion: $0)
-                object2[keyPath: keyPath2].send(completion: $0)
-                object3[keyPath: keyPath3].send(completion: $0)
+                switch $0 {
+                case .failure:
+                    object1[keyPath: keyPath1].send(completion: $0)
+                    object2[keyPath: keyPath2].send(completion: $0)
+                    object3[keyPath: keyPath3].send(completion: $0)
+                case .finished:
+                    if includeFinished {
+                        object1[keyPath: keyPath1].send(completion: $0)
+                        object2[keyPath: keyPath2].send(completion: $0)
+                        object3[keyPath: keyPath3].send(completion: $0)
+                    }
+                }
             } receiveValue: {
                 object1[keyPath: keyPath1].send($0)
                 object2[keyPath: keyPath2].send($0)
@@ -137,9 +194,18 @@ public extension Publisher {
             }
         case .weak:
             return sink { [weak object1, weak object2, weak object3] in
-                object1?[keyPath: keyPath1].send(completion: $0)
-                object2?[keyPath: keyPath2].send(completion: $0)
-                object3?[keyPath: keyPath3].send(completion: $0)
+                switch $0 {
+                case .failure:
+                    object1?[keyPath: keyPath1].send(completion: $0)
+                    object2?[keyPath: keyPath2].send(completion: $0)
+                    object3?[keyPath: keyPath3].send(completion: $0)
+                case .finished:
+                    if includeFinished {
+                        object1?[keyPath: keyPath1].send(completion: $0)
+                        object2?[keyPath: keyPath2].send(completion: $0)
+                        object3?[keyPath: keyPath3].send(completion: $0)
+                    }
+                }
             } receiveValue: { [weak object1, weak object2, weak object3] in
                 object1?[keyPath: keyPath1].send($0)
                 object2?[keyPath: keyPath2].send($0)
@@ -147,9 +213,18 @@ public extension Publisher {
             }
         case .unowned:
             return sink { [unowned object1, unowned object2, unowned object3] in
-                object1[keyPath: keyPath1].send(completion: $0)
-                object2[keyPath: keyPath2].send(completion: $0)
-                object3[keyPath: keyPath3].send(completion: $0)
+                switch $0 {
+                case .failure:
+                    object1[keyPath: keyPath1].send(completion: $0)
+                    object2[keyPath: keyPath2].send(completion: $0)
+                    object3[keyPath: keyPath3].send(completion: $0)
+                case .finished:
+                    if includeFinished {
+                        object1[keyPath: keyPath1].send(completion: $0)
+                        object2[keyPath: keyPath2].send(completion: $0)
+                        object3[keyPath: keyPath3].send(completion: $0)
+                    }
+                }
             } receiveValue: { [unowned object1, unowned object2] in
                 object1[keyPath: keyPath1].send($0)
                 object2[keyPath: keyPath2].send($0)
