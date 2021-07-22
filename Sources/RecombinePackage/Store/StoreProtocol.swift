@@ -173,32 +173,33 @@ public extension StoreProtocol {
 }
 
 public extension StoreProtocol {
-    func dispatch<S: Sequence>(serially _: Bool, actions: S) where S.Element == Action {
-        underlying.dispatch(actions: actions.map {
-            switch $0 {
-            case let .refined(actions):
-                return .refined(actions.map(actionPromotion))
-            case let .raw(actions):
-                return .raw(actions)
+    func dispatch<S: Sequence>(serially: Bool = false, actions: S) where S.Element == Action {
+        underlying.dispatch(
+            serially: serially,
+            actions: actions.map {
+                switch $0 {
+                case let .refined(actions):
+                    return .refined(actions.map(actionPromotion))
+                case let .raw(actions):
+                    return .raw(actions)
+                }
             }
-        })
+        )
     }
 
     func dispatch(serially: Bool = false, actions: Action...) {
         dispatch(serially: serially, actions: actions)
     }
 
-    func dispatch<S: Sequence>(serially _: Bool = false, raw actions: S) where S.Element == RawAction {
-        dispatch(actions: .raw(.init(actions)))
+    func dispatch<S: Sequence>(serially: Bool = false, raw actions: S) where S.Element == RawAction {
+        dispatch(serially: serially, actions: .raw(.init(actions)))
     }
 
     func dispatch(serially: Bool = false, raw actions: RawAction...) {
         dispatch(serially: serially, actions: .raw(actions))
     }
 
-    func dispatch<S: Sequence>(refined actions: S)
-        where S.Element == SubRefinedAction
-    {
+    func dispatch<S: Sequence>(refined actions: S) where S.Element == SubRefinedAction {
         dispatch(actions: .refined(.init(actions)))
     }
 
