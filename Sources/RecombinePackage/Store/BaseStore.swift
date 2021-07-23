@@ -152,22 +152,23 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
             maxPublishers: maxPublishers,
             recurse(actions:)
         )
+        let transformed: AnyPublisher<[RefinedAction], Never>
 
         if collect {
-            recursed
+            transformed = recursed
                 .collect()
                 .map { $0.flatMap { $0 } }
-                .sink {
-                    self?._preMiddlewareRefinedActions.send($0)
-                }
-                .store(in: &cancellables)
+                .eraseToAnyPublisher()
         } else {
-            recursed
-                .sink {
-                    self?._preMiddlewareRefinedActions.send($0)
-                }
-                .store(in: &cancellables)
+            transformed = recursed
+                .eraseToAnyPublisher()
         }
+
+        transformed
+            .sink {
+                self?._preMiddlewareRefinedActions.send($0)
+            }
+            .store(in: &cancellables)
     }
 
     open func injectBypassingMiddleware<S: Sequence>(actions: S) where S.Element == RefinedAction {
