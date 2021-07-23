@@ -123,11 +123,15 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
         _actionsPairedWithState.eraseToAnyPublisher()
     }
 
-    open func dispatch<S: Sequence>(serially: Bool = false, actions: S) where S.Element == Action {
+    open func dispatch<S: Sequence>(
+        serially: Bool = false,
+        collect: Bool = false,
+        actions: S
+    ) where S.Element == Action {
         let maxPublishers: Subscribers.Demand = serially ? .max(1) : .unlimited
         weak var `self` = self
 
-        func reduce(actions: Action) -> AnyPublisher<[RefinedAction], Never> {
+        func recurse(actions: Action) -> AnyPublisher<[RefinedAction], Never> {
             switch actions {
             case let .raw(actions):
                 self?._rawActions.send(actions)
@@ -137,20 +141,33 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
                             $0.thunk.transform($0.$state.first(), action)
                         }
                     }
-                    .flatMap(maxPublishers: maxPublishers, reduce(actions:))
+                    .flatMap(maxPublishers: maxPublishers, recurse(actions:))
                     .eraseToAnyPublisher()
             case let .refined(actions):
                 return Just(actions).eraseToAnyPublisher()
             }
         }
 
-        actions
-            .publisher
-            .flatMap(maxPublishers: maxPublishers, reduce(actions:))
-            .sink {
-                self?._preMiddlewareRefinedActions.send($0)
-            }
-            .store(in: &cancellables)
+        let recursed = actions.publisher.flatMap(
+            maxPublishers: maxPublishers,
+            recurse(actions:)
+        )
+
+        if collect {
+            recursed
+                .collect()
+                .map { $0.flatMap { $0 } }
+                .sink {
+                    self?._preMiddlewareRefinedActions.send($0)
+                }
+                .store(in: &cancellables)
+        } else {
+            recursed
+                .sink {
+                    self?._preMiddlewareRefinedActions.send($0)
+                }
+                .store(in: &cancellables)
+        }
     }
 
     open func injectBypassingMiddleware<S: Sequence>(actions: S) where S.Element == RefinedAction {

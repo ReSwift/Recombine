@@ -25,8 +25,7 @@ extension XCTestCase {
         _ store: Store,
         dropFirst: Int = 0,
         timeout: TimeInterval = 1,
-        serially: Bool = false,
-        actions: [ActionStrata<[Store.RawAction], [Store.SubRefinedAction]>],
+        access: (Store) -> Void,
         keyPath: KeyPath<Store.SubState, State>,
         value: State
     ) throws {
@@ -35,9 +34,29 @@ extension XCTestCase {
                 store,
                 dropFirst: dropFirst,
                 timeout: timeout,
-                access: { $0.dispatch(serially: serially, actions: actions) }
+                access: access
             )?[keyPath: keyPath],
             value
+        )
+    }
+
+    func nextEquals<Store: StoreProtocol, State: Equatable>(
+        _ store: Store,
+        dropFirst: Int = 0,
+        timeout: TimeInterval = 1,
+        serially: Bool = false,
+        collect: Bool = false,
+        actions: [ActionStrata<[Store.RawAction], [Store.SubRefinedAction]>],
+        keyPath: KeyPath<Store.SubState, State>,
+        value: State
+    ) throws {
+        try nextEquals(
+            store,
+            dropFirst: dropFirst,
+            timeout: timeout,
+            access: { $0.dispatch(serially: serially, collect: collect, actions: actions) },
+            keyPath: keyPath,
+            value: value
         )
     }
 
@@ -57,6 +76,7 @@ extension XCTestCase {
         count: Int,
         timeout: TimeInterval = 1,
         serially: Bool = false,
+        collect: Bool = false,
         actions: [ActionStrata<[Store.RawAction], [Store.SubRefinedAction]>],
         keyPath: KeyPath<Store.SubState, State>,
         values: [State]
@@ -66,7 +86,7 @@ extension XCTestCase {
                 store,
                 count: count,
                 timeout: timeout,
-                access: { $0.dispatch(serially: serially, actions: actions) }
+                access: { $0.dispatch(serially: serially, collect: collect, actions: actions) }
             ).map { $0[keyPath: keyPath] },
             values
         )

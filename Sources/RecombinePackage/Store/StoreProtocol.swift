@@ -14,7 +14,7 @@ public protocol StoreProtocol: ObservableObject, Subscriber {
     var underlying: Underlying { get }
     var stateLens: (BaseState) -> SubState { get }
     var actionPromotion: (SubRefinedAction) -> BaseRefinedAction { get }
-    func dispatch<S: Sequence>(serially: Bool, actions: S) where S.Element == Action
+    func dispatch<S: Sequence>(serially: Bool, collect: Bool, actions: S) where S.Element == Action
     func eraseToAnyStore() -> AnyStore<BaseState, SubState, RawAction, BaseRefinedAction, SubRefinedAction>
 }
 
@@ -173,9 +173,14 @@ public extension StoreProtocol {
 }
 
 public extension StoreProtocol {
-    func dispatch<S: Sequence>(serially: Bool = false, actions: S) where S.Element == Action {
+    func dispatch<S: Sequence>(
+        serially: Bool = false,
+        collect: Bool = false,
+        actions: S
+    ) where S.Element == Action {
         underlying.dispatch(
             serially: serially,
+            collect: collect,
             actions: actions.map {
                 switch $0 {
                 case let .refined(actions):
@@ -187,16 +192,28 @@ public extension StoreProtocol {
         )
     }
 
-    func dispatch(serially: Bool = false, actions: Action...) {
-        dispatch(serially: serially, actions: actions)
+    func dispatch(
+        serially: Bool = false,
+        collect: Bool = false,
+        actions: Action...
+    ) {
+        dispatch(serially: serially, collect: collect, actions: actions)
     }
 
-    func dispatch<S: Sequence>(serially: Bool = false, raw actions: S) where S.Element == RawAction {
-        dispatch(serially: serially, actions: .raw(.init(actions)))
+    func dispatch<S: Sequence>(
+        serially: Bool = false,
+        collect: Bool = false,
+        raw actions: S
+    ) where S.Element == RawAction {
+        dispatch(serially: serially, collect: collect, actions: .raw(.init(actions)))
     }
 
-    func dispatch(serially: Bool = false, raw actions: RawAction...) {
-        dispatch(serially: serially, actions: .raw(actions))
+    func dispatch(
+        serially: Bool = false,
+        collect: Bool = false,
+        raw actions: RawAction...
+    ) {
+        dispatch(serially: serially, collect: collect, actions: .raw(actions))
     }
 
     func dispatch<S: Sequence>(refined actions: S) where S.Element == SubRefinedAction {
