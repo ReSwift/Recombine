@@ -12,7 +12,7 @@ class StoreMiddlewareTests: XCTestCase {
         let store = BaseStore(
             state: TestFakes.StringTest.State(),
             reducer: TestFakes.StringTest.reducer,
-            middleware: firstMiddleware.concat(secondMiddleware),
+            middleware: firstMiddleware.appending(secondMiddleware),
             thunk: .init(),
             publishOn: ImmediateScheduler.shared
         )

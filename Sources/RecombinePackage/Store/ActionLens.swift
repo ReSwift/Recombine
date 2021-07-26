@@ -1,21 +1,54 @@
 public struct ActionLens<RawAction, BaseRefinedAction, SubRefinedAction> {
-    let dispatchFunction: (ActionStrata<[RawAction], [SubRefinedAction]>) -> Void
+    public typealias Action = ActionStrata<[RawAction], [SubRefinedAction]>
+    let dispatchFunction: (Bool, Bool, [Action]) -> Void
 
-    public func callAsFunction<S: Sequence>(actions: S) where S.Element == SubRefinedAction {
-        dispatchFunction(.refined(.init(actions)))
+    public func callAsFunction<S: Sequence>(
+        serially: Bool = false,
+        collect: Bool = false,
+        actions: S
+    ) where S.Element == Action {
+        dispatchFunction(serially, collect, .init(actions))
     }
 
-    public func callAsFunction<S: Sequence>(actions: S) where S.Element == RawAction {
-        dispatchFunction(.raw(.init(actions)))
+    public func callAsFunction<S: Sequence>(
+        serially: Bool = false,
+        collect: Bool = false,
+        refined actions: S
+    ) where S.Element == SubRefinedAction {
+        dispatchFunction(serially, collect, [.refined(.init(actions))])
+    }
+
+    public func callAsFunction<S: Sequence>(
+        serially: Bool = false,
+        collect: Bool = false,
+        raw actions: S
+    ) where S.Element == RawAction {
+        dispatchFunction(serially, collect, [.raw(.init(actions))])
     }
 }
 
 public extension ActionLens {
-    func callAsFunction(actions: SubRefinedAction...) {
-        dispatchFunction(.refined(actions))
+    func callAsFunction(
+        serially: Bool = false,
+        collect: Bool = false,
+        actions: Action...
+    ) {
+        callAsFunction(serially: serially, collect: collect, actions: actions)
     }
 
-    func callAsFunction(actions: RawAction...) {
-        dispatchFunction(.raw(actions))
+    func callAsFunction(
+        serially: Bool = false,
+        collect: Bool = false,
+        refined actions: SubRefinedAction...
+    ) {
+        callAsFunction(serially: serially, collect: collect, refined: actions)
+    }
+
+    func callAsFunction(
+        serially: Bool = false,
+        collect: Bool = false,
+        raw actions: RawAction...
+    ) {
+        callAsFunction(serially: serially, collect: collect, raw: actions)
     }
 }

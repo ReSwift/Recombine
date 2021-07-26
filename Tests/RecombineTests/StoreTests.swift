@@ -96,6 +96,7 @@ class DeInitStore<State: Equatable>: BaseStore<State, TestFakes.SetAction, TestF
         reducer: R,
         middleware _: Middleware<State, TestFakes.SetAction, TestFakes.SetAction> = .init(),
         thunk: Thunk<State, TestFakes.SetAction, TestFakes.SetAction> = .init(),
+        sideEffect _: SideEffect<TestFakes.SetAction> = .init(),
         publishOn scheduler: S
     ) where State == R.State, TestFakes.SetAction == R.Action, S: Scheduler, R: Reducer {
         super.init(

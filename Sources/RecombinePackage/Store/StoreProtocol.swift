@@ -79,13 +79,19 @@ public extension StoreProtocol {
         BaseRefinedAction,
         SubRefinedAction
     > {
-        ActionLens {
-            switch $0 {
-            case let .raw(actions):
-                self.underlying.dispatch(raw: actions)
-            case let .refined(actions):
-                self.underlying.dispatch(refined: actions.map(self.actionPromotion))
-            }
+        ActionLens { [underlying, actionPromotion] serially, collect, actions in
+            underlying.dispatch(
+                serially: serially,
+                collect: collect,
+                actions: actions.map {
+                    switch $0 {
+                    case let .refined(actions):
+                        return .refined(actions.map(actionPromotion))
+                    case let .raw(actions):
+                        return .raw(actions)
+                    }
+                }
+            )
         }
     }
 }

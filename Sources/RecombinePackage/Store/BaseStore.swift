@@ -27,6 +27,7 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
         reducer: R,
         middleware: Middleware<State, RawAction, RefinedAction> = .init(),
         thunk: Thunk<State, RawAction, RefinedAction> = .init { _, _ in Empty() },
+        sideEffect: SideEffect<RefinedAction> = .init(),
         publishOn scheduler: S
     ) where R.State == State, R.Action == RefinedAction {
         self.state = state
@@ -72,6 +73,9 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
         group?.enter()
         DispatchQueue.global().async {
             self._postMiddlewareRefinedActions
+                .handleEvents(receiveOutput: {
+                    sideEffect.closure($0)
+                })
                 .scan(state) { state, actions in
                     actions.reduce(state, reducer.reduce)
                 }
@@ -123,12 +127,17 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
         _actionsPairedWithState.eraseToAnyPublisher()
     }
 
+    /// Dispatch actions to the store.
+    ///
+    /// - parameter serially: Whether to resolve the actions concurrently or serially.
+    /// - parameter collect: Whether to collect all refined actions and send them when finished, or send them as they are resolved.
+    /// - parameter actions: The actions to be sent.
     open func dispatch<S: Sequence>(
         serially: Bool = false,
         collect: Bool = false,
         actions: S
     ) where S.Element == Action {
-        let maxPublishers: Subscribers.Demand = serially ? .max(1) : .unlimited
+        let maxPublishers: Subscribers.Demand = serially.if(true: .max(1), false: .unlimited)
         weak var `self` = self
 
         func recurse(actions: Action) -> AnyPublisher<[RefinedAction], Never> {
@@ -152,23 +161,19 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
             maxPublishers: maxPublishers,
             recurse(actions:)
         )
-        let transformed: AnyPublisher<[RefinedAction], Never>
 
-        if collect {
-            transformed = recursed
+        collect.if(
+            true: recursed
                 .collect()
                 .map { $0.flatMap { $0 } }
+                .eraseToAnyPublisher(),
+            false: recursed
                 .eraseToAnyPublisher()
-        } else {
-            transformed = recursed
-                .eraseToAnyPublisher()
+        )
+        .sink {
+            self?._preMiddlewareRefinedActions.send($0)
         }
-
-        transformed
-            .sink {
-                self?._preMiddlewareRefinedActions.send($0)
-            }
-            .store(in: &cancellables)
+        .store(in: &cancellables)
     }
 
     open func injectBypassingMiddleware<S: Sequence>(actions: S) where S.Element == RefinedAction {
