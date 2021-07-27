@@ -124,11 +124,18 @@ class ObservableStoreDispatchTests: XCTestCase {
         )
     }
 
-    func testSerialDispatchWithCollect() throws {
+    func testSerialDispatchWithCollectWithSideEffects() throws {
+        var sideEffected = ""
+
         let store = BaseStore(
             state: "",
             reducer: reducer,
             thunk: thunk,
+            sideEffect: .init {
+                $0.flatMap { [$0, $0] }.forEach {
+                    sideEffected += $0
+                }
+            },
             publishOn: ImmediateScheduler.shared
         )
 
@@ -162,6 +169,11 @@ class ObservableStoreDispatchTests: XCTestCase {
         XCTAssertEqual(
             try wait(for: refinedActionsRecorder.next(), timeout: 10),
             value.map { String($0) }
+        )
+
+        XCTAssertEqual(
+            sideEffected,
+            value.map { String($0) + String($0) }.joined()
         )
     }
 }
