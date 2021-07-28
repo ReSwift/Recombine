@@ -9,6 +9,8 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
     public typealias ActionsAndState = ([RefinedAction], (previous: State, current: State))
     @Published
     public private(set) var state: State
+    @Published
+    public var dispatchEnabled = true
     public var statePublisher: Published<State>.Publisher { $state }
     public var underlying: BaseStore<State, RawAction, RefinedAction> { self }
     public let stateLens: (State) -> State = { $0 }
@@ -137,6 +139,10 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
         collect: Bool = false,
         actions: S
     ) where S.Element == Action {
+        guard dispatchEnabled else {
+            return
+        }
+
         let maxPublishers: Subscribers.Demand = serially.if(true: .max(1), false: .unlimited)
         weak var `self` = self
 
@@ -177,6 +183,44 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
     }
 
     open func injectBypassingMiddleware<S: Sequence>(actions: S) where S.Element == RefinedAction {
-        _postMiddlewareRefinedActions.send(.init(actions))
+        dispatchEnabled.if(
+            true: _postMiddlewareRefinedActions.send(.init(actions))
+        )
+    }
+
+    open func _replay<S: Sequence>(_ values: S) where S.Element == (offset: Double, actions: [RefinedAction]) {
+        values
+            .publisher
+            .flatMap { offset, actions in
+                Just(actions).delay(
+                    for: .seconds(max(0, offset)),
+                    scheduler: DispatchQueue.global()
+                )
+            }
+
+        values.dropLast()
+            .publisher
+    }
+
+    open func replay<S: Sequence>(_ values: S) -> AnyPublisher<[RefinedAction], Never>
+        where S.Element == (offset: Double, actions: [RefinedAction])
+    {
+        values
+            .publisher
+            .flatMap { offset, actions in
+                Just(actions).delay(
+                    for: .seconds(max(0, offset)),
+                    scheduler: DispatchQueue.global()
+                )
+            }
+            .handleEvents(
+                receiveSubscription: { _ in self.dispatchEnabled = false },
+                receiveOutput: _postMiddlewareRefinedActions.send,
+                receiveCompletion: { _ in self.dispatchEnabled = true },
+                receiveCancel: { self.dispatchEnabled = true }
+            )
+            // Cancel if dispatch is manually reenabled.
+            .prefix(untilOutputFrom: $dispatchEnabled.filter { $0 })
+            .eraseToAnyPublisher()
     }
 }
