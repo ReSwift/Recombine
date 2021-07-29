@@ -75,9 +75,7 @@ extension XCTestCase {
         _ store: Store,
         count: Int,
         timeout: TimeInterval = 1,
-        serially: Bool = false,
-        collect: Bool = false,
-        actions: [ActionStrata<[Store.RawAction], [Store.SubRefinedAction]>],
+        access: (Store) -> Void,
         keyPath: KeyPath<Store.SubState, State>,
         values: [State]
     ) throws {
@@ -86,9 +84,29 @@ extension XCTestCase {
                 store,
                 count: count,
                 timeout: timeout,
-                access: { $0.dispatch(serially: serially, collect: collect, actions: actions) }
+                access: access
             ).map { $0[keyPath: keyPath] },
             values
+        )
+    }
+
+    func prefixEquals<Store: StoreProtocol, State: Equatable>(
+        _ store: Store,
+        count: Int,
+        timeout: TimeInterval = 1,
+        serially: Bool = false,
+        collect: Bool = false,
+        actions: [ActionStrata<[Store.RawAction], [Store.SubRefinedAction]>],
+        keyPath: KeyPath<Store.SubState, State>,
+        values: [State]
+    ) throws {
+        try prefixEquals(
+            store,
+            count: count,
+            timeout: timeout,
+            access: { $0.dispatch(serially: serially, collect: collect, actions: actions) },
+            keyPath: keyPath,
+            values: values
         )
     }
 }

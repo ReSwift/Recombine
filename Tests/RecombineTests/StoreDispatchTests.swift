@@ -176,4 +176,29 @@ class ObservableStoreDispatchTests: XCTestCase {
             value.map { String($0) + String($0) }.joined()
         )
     }
+
+    func testReplay() throws {
+        let store = BaseStore(
+            state: "",
+            reducer: reducer,
+            thunk: thunk,
+            publishOn: DispatchQueue.global()
+        )
+
+        try prefixEquals(
+            store,
+            count: 2,
+            timeout: 10,
+            access: { store in
+                store.replay(
+                    [
+                        (offset: 0, actions: ["1"]),
+                        (offset: 0.5, actions: ["2"]),
+                    ]
+                )
+            },
+            keyPath: \.self,
+            values: ["1", "12"]
+        )
+    }
 }
