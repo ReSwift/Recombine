@@ -188,7 +188,8 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
         )
     }
 
-    open func _replay<S: Sequence>(_ values: S) where S.Element == (offset: Double, actions: [RefinedAction]) {
+    open func replay<S: Sequence>(_ values: S) where S.Element == (offset: Double, actions: [RefinedAction]) {
+        dispatchEnabled = false
         values
             .publisher
             .flatMap { offset, actions in
@@ -197,30 +198,15 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
                     scheduler: DispatchQueue.global()
                 )
             }
-
-        values.dropLast()
-            .publisher
-    }
-
-    open func replay<S: Sequence>(_ values: S) -> AnyPublisher<[RefinedAction], Never>
-        where S.Element == (offset: Double, actions: [RefinedAction])
-    {
-        values
-            .publisher
-            .flatMap { offset, actions in
-                Just(actions).delay(
-                    for: .seconds(max(0, offset)),
-                    scheduler: DispatchQueue.global()
-                )
-            }
-            .handleEvents(
-                receiveSubscription: { _ in self.dispatchEnabled = false },
-                receiveOutput: _postMiddlewareRefinedActions.send,
-                receiveCompletion: { _ in self.dispatchEnabled = true },
-                receiveCancel: { self.dispatchEnabled = true }
-            )
             // Cancel if dispatch is manually reenabled.
             .prefix(untilOutputFrom: $dispatchEnabled.filter { $0 })
-            .eraseToAnyPublisher()
+            .print("REPLAY::")
+            .sink(
+                receiveCompletion: { _ in
+                    self.dispatchEnabled = true
+                },
+                receiveValue: _postMiddlewareRefinedActions.send
+            )
+            .store(in: &cancellables)
     }
 }
