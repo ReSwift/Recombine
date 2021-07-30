@@ -200,6 +200,7 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
             }
             // Cancel if dispatch is manually reenabled.
             .prefix(untilOutputFrom: $dispatchEnabled.filter { $0 })
+            .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { _ in
                     self.dispatchEnabled = true
