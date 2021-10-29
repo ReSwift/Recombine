@@ -147,14 +147,14 @@ public extension StoreProtocol {
 
     /// Create an `ActionLens`, which can only send actions.
     func writeOnlyRefined<NewRefinedAction>(
-        refined transform: @escaping (NewRefinedAction) -> RefinedAction
+        _ transform: @escaping (NewRefinedAction) -> RefinedAction
     ) -> ActionLens<Never, NewRefinedAction> {
         writeOnly(raw: { _ -> RawAction in }, refined: transform)
     }
 
     /// Create an `ActionLens`, which can only send actions.
     func writeOnlyRaw<NewRawAction>(
-        raw transform: @escaping (NewRawAction) -> RawAction
+        _ transform: @escaping (NewRawAction) -> RawAction
     ) -> ActionLens<NewRawAction, Never> {
         writeOnly(raw: transform, refined: { _ -> RefinedAction in })
     }
