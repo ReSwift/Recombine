@@ -27,6 +27,26 @@ public struct ActionLens<RawAction, RefinedAction> {
     }
 }
 
+public extension ActionLens where RawAction == Never, RefinedAction == Void {
+    func callAsFunction() {
+        dispatchFunction(
+            false,
+            false,
+            [.refined([()])]
+        )
+    }
+}
+
+public extension ActionLens where RawAction == Void, RefinedAction == Never {
+    func callAsFunction() {
+        dispatchFunction(
+            false,
+            false,
+            [.raw([()])]
+        )
+    }
+}
+
 public extension ActionLens {
     func callAsFunction(
         serially: Bool = false,
