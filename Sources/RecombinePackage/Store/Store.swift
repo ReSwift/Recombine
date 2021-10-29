@@ -99,7 +99,7 @@ public class Store<State: Equatable, RawAction, RefinedAction>: StoreProtocol, O
         }
     }
 
-    convenience init<Parameters: StoreParameter>(parameters _: Parameters.Type)
+    public convenience init<Parameters: StoreParameter>(parameters _: Parameters.Type)
         where State == Parameters.States.Main,
         RefinedAction == Parameters.Action.Refined,
         RawAction == Parameters.Action.Raw
