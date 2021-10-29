@@ -1,5 +1,5 @@
-public struct ActionLens<RawAction, BaseRefinedAction, SubRefinedAction> {
-    public typealias Action = ActionStrata<[RawAction], [SubRefinedAction]>
+public struct ActionLens<RawAction, RefinedAction> {
+    public typealias Action = ActionStrata<RawAction, RefinedAction>
     let dispatchFunction: (Bool, Bool, [Action]) -> Void
 
     public func callAsFunction<S: Sequence>(
@@ -14,7 +14,7 @@ public struct ActionLens<RawAction, BaseRefinedAction, SubRefinedAction> {
         serially: Bool = false,
         collect: Bool = false,
         refined actions: S
-    ) where S.Element == SubRefinedAction {
+    ) where S.Element == RefinedAction {
         dispatchFunction(serially, collect, [.refined(.init(actions))])
     }
 
@@ -39,7 +39,7 @@ public extension ActionLens {
     func callAsFunction(
         serially: Bool = false,
         collect: Bool = false,
-        refined actions: SubRefinedAction...
+        refined actions: RefinedAction...
     ) {
         callAsFunction(serially: serially, collect: collect, refined: actions)
     }

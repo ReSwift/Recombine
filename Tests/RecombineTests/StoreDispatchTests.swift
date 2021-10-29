@@ -3,7 +3,7 @@ import CombineExpectations
 @testable import Recombine
 import XCTest
 
-private typealias StoreTestType = BaseStore<TestFakes.IntTest.State, TestFakes.SetAction, TestFakes.SetAction>
+private typealias StoreTestType = Store<TestFakes.IntTest.State, TestFakes.SetAction, TestFakes.SetAction>
 
 class ObservableStoreDispatchTests: XCTestCase {
     enum RawAction: Equatable {
@@ -12,7 +12,7 @@ class ObservableStoreDispatchTests: XCTestCase {
     }
 
     let thunk = Thunk<String, RawAction, String> { _, action -> AnyPublisher
-        <ActionStrata<[RawAction], [String]>, Never> in
+        <ActionStrata<RawAction, String>, Never> in
         switch action {
         case let .addTwice(value):
             return Just(value)
@@ -32,7 +32,7 @@ class ObservableStoreDispatchTests: XCTestCase {
         }
     }
 
-    let reducer: MutatingReducer<String, String> = .init { state, action in
+    let reducer: Reducer<String, String, Void> = .init { state, action, _ in
         state += action
     }
 
@@ -40,14 +40,15 @@ class ObservableStoreDispatchTests: XCTestCase {
      it subscribes to the property we pass in and dispatches any new values
      */
     func testLiftingWorksAsExpected() throws {
-        let store = BaseStore(
+        let store = Store(
             state: "",
             reducer: reducer,
             thunk: thunk,
+            environment: (),
             publishOn: ImmediateScheduler.shared
         )
 
-        let subject = PassthroughSubject<ActionStrata<[RawAction], [String]>, Never>()
+        let subject = PassthroughSubject<ActionStrata<RawAction, String>, Never>()
         let rawActionsRecorder = store.rawActions.record()
         let refinedActionsRecorder = store.postMiddlewareRefinedActions.record()
 
@@ -75,10 +76,11 @@ class ObservableStoreDispatchTests: XCTestCase {
     }
 
     func testSerialDispatch() throws {
-        let store = BaseStore(
+        let store = Store(
             state: "",
             reducer: reducer,
             thunk: thunk,
+            environment: (),
             publishOn: ImmediateScheduler.shared
         )
 
@@ -127,7 +129,7 @@ class ObservableStoreDispatchTests: XCTestCase {
     func testSerialDispatchWithCollectWithSideEffects() throws {
         var sideEffected = ""
 
-        let store = BaseStore(
+        let store = Store(
             state: "",
             reducer: reducer,
             thunk: thunk,
@@ -136,6 +138,7 @@ class ObservableStoreDispatchTests: XCTestCase {
                     sideEffected += $0
                 }
             },
+            environment: (),
             publishOn: ImmediateScheduler.shared
         )
 
@@ -178,10 +181,11 @@ class ObservableStoreDispatchTests: XCTestCase {
     }
 
     func testReplay() throws {
-        let store = BaseStore(
+        let store = Store(
             state: "",
             reducer: reducer,
             thunk: thunk,
+            environment: (),
             publishOn: DispatchQueue.global()
         )
 

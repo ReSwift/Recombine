@@ -1,19 +1,16 @@
 import Combine
 import Foundation
 
-public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtocol {
-    public typealias SubState = State
-    public typealias SubRefinedAction = RefinedAction
-    // Necessary due to a bug in the compiler.
-    public typealias Action = ActionStrata<[RawAction], [SubRefinedAction]>
+public class Store<State: Equatable, RawAction, RefinedAction>: StoreProtocol, ObservableObject {
+    public typealias Dispatch = (Bool, Bool, [ActionStrata<RawAction, RefinedAction>]) -> Void
+    public typealias BaseState = State
+    public typealias Action = ActionStrata<RawAction, RefinedAction>
     public typealias ActionsAndState = ([RefinedAction], (previous: State, current: State))
-    @Published
-    public private(set) var state: State
-    @Published
-    public var dispatchEnabled = true
-    public var statePublisher: Published<State>.Publisher { $state }
-    public var underlying: BaseStore<State, RawAction, RefinedAction> { self }
-    public let stateLens: (State) -> State = { $0 }
+    @Published public private(set) var state: State
+    @Published public var dispatchEnabled = true
+    public var statePublisher: AnyPublisher<State, Never> { $state.eraseToAnyPublisher() }
+    public var underlying: Store<State, RawAction, RefinedAction> { self }
+    public let stateTransform: (State) -> State = { $0 }
     public let actionPromotion: (RefinedAction) -> RefinedAction = { $0 }
 
     private let thunk: Thunk<State, RawAction, RefinedAction>
@@ -24,14 +21,15 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
     private let _actionsPairedWithState = PassthroughSubject<ActionsAndState, Never>()
     private var cancellables = Set<AnyCancellable>()
 
-    public init<S: Scheduler, R: Reducer>(
+    public init<S: Scheduler, Environment>(
         state: State,
-        reducer: R,
+        reducer: Reducer<State, RefinedAction, Environment>,
         middleware: Middleware<State, RawAction, RefinedAction> = .init(),
         thunk: Thunk<State, RawAction, RefinedAction> = .init { _, _ in Empty() },
         sideEffect: SideEffect<RefinedAction> = .init(),
+        environment: Environment,
         publishOn scheduler: S
-    ) where R.State == State, R.Action == RefinedAction {
+    ) {
         self.state = state
         self.thunk = thunk
 
@@ -79,7 +77,7 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
                     sideEffect.closure($0)
                 })
                 .scan(state) { state, actions in
-                    actions.reduce(state, reducer.reduce)
+                    actions.reduce(state, { reducer.reduce(state: $0, action: $1, environment: environment) })
                 }
                 .prepend(state)
                 .handleEvents(receiveOutput: { _ in
@@ -99,6 +97,21 @@ public class BaseStore<State: Equatable, RawAction, RefinedAction>: StoreProtoco
         DispatchQueue.global().sync {
             group?.wait()
         }
+    }
+
+    convenience init<Parameters: StoreParameter>(parameters _: Parameters.Type)
+    where State == Parameters.States.Main,
+    RefinedAction == Parameters.Action.Refined,
+    RawAction == Parameters.Action.Raw {
+        self.init(
+            state: Parameters.States.initial,
+            reducer: Parameters.Reducers.main,
+            middleware: Parameters.Middlewares.main,
+            thunk: Parameters.Thunks.main,
+            sideEffect: Parameters.SideEffects.main,
+            environment: Parameters.environment,
+            publishOn: Parameters.scheduler
+        )
     }
 
     open var actions: AnyPublisher<Action, Never> {

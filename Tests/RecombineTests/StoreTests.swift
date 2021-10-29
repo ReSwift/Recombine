@@ -30,27 +30,28 @@ class StoreTests: XCTestCase {
     }
 
     func testBinding() throws {
-        let store = BaseStore(
+        let store = Store(
             state: TestFakes.NestedTest.State(),
             reducer: TestFakes.NestedTest.reducer,
             middleware: .init(),
             thunk: .init(),
+            environment: (),
             publishOn: ImmediateScheduler.shared
         )
         let binding1 = store.binding(
-            state: \.subState.value,
-            action: { .sub(.set("\($0)1")) }
+            get: \.subState.value,
+            send: { .sub(.set("\($0)1")) }
         )
         let binding2 = store.lensing(
             state: \.subState.value
         ).binding(
-            action: { .sub(.set("\($0)2")) }
+            send: { .sub(.set("\($0)2")) }
         )
         let binding3 = store.lensing(
             state: \.subState,
-            actions: { .sub(.set("\($0)3")) }
+            refined: { .sub(.set("\($0)3")) }
         ).binding(
-            state: \.value
+            get: \.value
         )
         let stateRecorder = store.$state.dropFirst().record()
 
@@ -69,7 +70,7 @@ class StoreTests: XCTestCase {
 }
 
 // Used for deinitialization test
-class DeInitStore<State: Equatable>: BaseStore<State, TestFakes.SetAction, TestFakes.SetAction> {
+class DeInitStore<State: Equatable>: Store<State, TestFakes.SetAction.Raw, TestFakes.SetAction.Refined> {
     var deInitAction: (() -> Void)?
 
     deinit {
@@ -78,31 +79,34 @@ class DeInitStore<State: Equatable>: BaseStore<State, TestFakes.SetAction, TestF
 
     convenience init(
         state: State,
-        reducer: MutatingReducer<State, TestFakes.SetAction>,
-        thunk: Thunk<State, TestFakes.SetAction, TestFakes.SetAction> = .init(),
+        reducer: Reducer<State, RefinedAction, Void>,
+        thunk: Thunk<State, RawAction, RefinedAction> = .init { _, _ in Empty().eraseToAnyPublisher() },
         deInitAction: @escaping () -> Void
     ) {
         self.init(
             state: state,
             reducer: reducer,
             thunk: thunk,
+            environment: (),
             publishOn: ImmediateScheduler.shared
         )
         self.deInitAction = deInitAction
     }
 
-    override init<S, R>(
+    override init<S: Scheduler, Environment>(
         state: State,
-        reducer: R,
-        middleware _: Middleware<State, TestFakes.SetAction, TestFakes.SetAction> = .init(),
-        thunk: Thunk<State, TestFakes.SetAction, TestFakes.SetAction> = .init(),
-        sideEffect _: SideEffect<TestFakes.SetAction> = .init(),
+        reducer: Reducer<State, RefinedAction, Environment>,
+        middleware _: Middleware<State, RawAction, RefinedAction> = .init(),
+        thunk: Thunk<State, RawAction, RefinedAction> = .init { _, _ in Empty().eraseToAnyPublisher() },
+        sideEffect _: SideEffect<RefinedAction> = .init(),
+        environment: Environment,
         publishOn scheduler: S
-    ) where State == R.State, TestFakes.SetAction == R.Action, S: Scheduler, R: Reducer {
+    ) {
         super.init(
             state: state,
             reducer: reducer,
             thunk: thunk,
+            environment: environment,
             publishOn: scheduler
         )
     }

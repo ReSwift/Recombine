@@ -4,7 +4,7 @@ import Combine
 /// Refined actions produced by Middleware are then forwarded to the main reducer.
 public struct Middleware<State, RawAction, RefinedAction> {
     /// A function to dispatch actions such that they flow through all of the `Middleware` again.
-    public typealias Action = ActionStrata<[RawAction], [RefinedAction]>
+    public typealias Action = ActionStrata<RawAction, RefinedAction>
     public typealias Dispatch = (Action...) -> Void
     public typealias Function = (State, RefinedAction, Dispatch) -> [RefinedAction]
     internal let transform: Function

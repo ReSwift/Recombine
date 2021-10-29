@@ -4,7 +4,7 @@ import CombineExpectations
 import XCTest
 
 extension StoreProtocol {
-    var recorder: Recorder<SubState, Never> {
+    var recorder: Recorder<State, Never> {
         statePublisher.dropFirst().record()
     }
 }
@@ -15,7 +15,7 @@ extension XCTestCase {
         dropFirst: Int,
         timeout: TimeInterval = 1,
         access: (Store) -> Void
-    ) throws -> Store.SubState? {
+    ) throws -> Store.State? {
         let recorder = store.recorder
         access(store)
         return try wait(for: recorder.prefix(dropFirst + 1), timeout: timeout).last
@@ -26,7 +26,7 @@ extension XCTestCase {
         dropFirst: Int = 0,
         timeout: TimeInterval = 1,
         access: (Store) -> Void,
-        keyPath: KeyPath<Store.SubState, State>,
+        keyPath: KeyPath<Store.State, State>,
         value: State
     ) throws {
         XCTAssertEqual(
@@ -46,8 +46,8 @@ extension XCTestCase {
         timeout: TimeInterval = 1,
         serially: Bool = false,
         collect: Bool = false,
-        actions: [ActionStrata<[Store.RawAction], [Store.SubRefinedAction]>],
-        keyPath: KeyPath<Store.SubState, State>,
+        actions: [ActionStrata<Store.RawAction, Store.RefinedAction>],
+        keyPath: KeyPath<Store.State, State>,
         value: State
     ) throws {
         try nextEquals(
@@ -65,7 +65,7 @@ extension XCTestCase {
         count: Int,
         timeout: TimeInterval = 1,
         access: (Store) -> Void
-    ) throws -> [Store.SubState] {
+    ) throws -> [Store.State] {
         let recorder = store.recorder
         access(store)
         return try wait(for: recorder.prefix(count), timeout: timeout)
@@ -76,7 +76,7 @@ extension XCTestCase {
         count: Int,
         timeout: TimeInterval = 1,
         access: (Store) -> Void,
-        keyPath: KeyPath<Store.SubState, State>,
+        keyPath: KeyPath<Store.State, State>,
         values: [State]
     ) throws {
         XCTAssertEqual(
@@ -96,8 +96,8 @@ extension XCTestCase {
         timeout: TimeInterval = 1,
         serially: Bool = false,
         collect: Bool = false,
-        actions: [ActionStrata<[Store.RawAction], [Store.SubRefinedAction]>],
-        keyPath: KeyPath<Store.SubState, State>,
+        actions: [ActionStrata<Store.RawAction, Store.RefinedAction>],
+        keyPath: KeyPath<Store.State, State>,
         values: [State]
     ) throws {
         try prefixEquals(

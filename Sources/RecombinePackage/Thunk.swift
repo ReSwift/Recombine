@@ -37,7 +37,7 @@ import Combine
 
 public struct Thunk<State, Input, Output> {
     public typealias StatePublisher = Publishers.First<Published<State>.Publisher>
-    public typealias Action = ActionStrata<[Input], [Output]>
+    public typealias Action = ActionStrata<Input, Output>
     public typealias Function = (StatePublisher, Input) -> AnyPublisher<Action, Never>
     internal let transform: Function
 
@@ -48,8 +48,8 @@ public struct Thunk<State, Input, Output> {
     /// For example:
     ///
     ///     static let passthroughThunk = Thunk<State, Action.Refined, Action.Refined>()
-    public init() where Input == Output {
-        transform = { Just(.refined($1)).eraseToAnyPublisher() }
+    public init() where Input == Never {
+        transform = { _, _ -> AnyPublisher<ActionStrata<Input, Output>, Never> in }
     }
 
     /// Initialises the thunk with a closure which handles transforming the raw actions and returning refined actions.
@@ -66,19 +66,19 @@ public struct Thunk<State, Input, Output> {
     ///     static let thunk = Thunk<State, Action.Raw, Action.Refined> { statePublisher, action -> AnyPublisher<ActionStrata<Action.Raw, Action.Refined>, Never> in
     ///         switch action {
     ///             case let findCurrentLocation(service):
-    ///                 CLLocationManager.currentLocationPublisher(service: service)
+    ///                 return CLLocationManager.currentLocationPublisher(service: service)
     ///                     .map { LocationModel(location: $0) }
     ///                     .flatMap { location in
     ///                         statePublisher.map { _ in
     ///                             return .setLocation(to: location)
     ///                         }
     ///                     }
-    ///                     .catch { err in
-    ///                         return Just(.locationError(err))
+    ///                     .catch {
+    ///                         Just(.locationError($0))
     ///                     }
     ///                     .map { .refined($0) }
     ///                     .eraseToAnyPublisher()
-    /// For a more detailed explanation, go to the `Middleware` documentation.
+    ///
     public init<P: Publisher>(
         _ transform: @escaping (StatePublisher, Input) -> P
     ) where P.Output == Action, P.Failure == Never {

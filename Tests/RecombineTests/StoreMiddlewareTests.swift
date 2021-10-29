@@ -9,11 +9,12 @@ class StoreMiddlewareTests: XCTestCase {
      it can decorate dispatch function
      */
     func testDecorateMiddlewareDispatch() throws {
-        let store = BaseStore(
+        let store = Store(
             state: TestFakes.StringTest.State(),
             reducer: TestFakes.StringTest.reducer,
             middleware: firstMiddleware.appending(secondMiddleware),
-            thunk: .init(),
+            thunk: .init { _, _ in Empty().eraseToAnyPublisher() },
+            environment: (),
             publishOn: ImmediateScheduler.shared
         )
 
@@ -31,7 +32,7 @@ class StoreMiddlewareTests: XCTestCase {
      it reruns for dispatching
      */
     func testRedispatch() throws {
-        let middleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction, TestFakes.SetAction> { _, action, dispatch -> [TestFakes.SetAction] in
+        let middleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction.Raw, TestFakes.SetAction.Refined> { _, action, dispatch -> [TestFakes.SetAction.Refined] in
             switch action {
             case let .string(value):
                 if !value.contains("Middleware") {
@@ -43,11 +44,12 @@ class StoreMiddlewareTests: XCTestCase {
             }
             return [action]
         }
-        let store = BaseStore(
+        let store = Store(
             state: TestFakes.StringTest.State(),
             reducer: TestFakes.StringTest.reducer,
             middleware: middleware,
-            thunk: .init(),
+            thunk: .init { _, _ in Empty().eraseToAnyPublisher() },
+            environment: (),
             publishOn: ImmediateScheduler.shared
         )
 
@@ -65,11 +67,12 @@ class StoreMiddlewareTests: XCTestCase {
      it can decorate dispatch function
      */
     func testDecorateThunkDispatch() throws {
-        let store = BaseStore(
+        let store = Store(
             state: TestFakes.StringTest.State(),
             reducer: TestFakes.StringTest.reducer,
             middleware: .init(),
             thunk: thunk,
+            environment: (),
             publishOn: ImmediateScheduler.shared
         )
 
@@ -87,14 +90,15 @@ class StoreMiddlewareTests: XCTestCase {
      it actions should be multiplied via the increase function
      */
     func testMiddlewareMultiplies() throws {
-        let multiplexingMiddleware = Middleware<TestFakes.CounterTest.State, TestFakes.SetAction, TestFakes.SetAction> { _, action, _ in
+        let multiplexingMiddleware = Middleware<TestFakes.CounterTest.State, TestFakes.SetAction.Raw, TestFakes.SetAction.Refined> { _, action, _ in
             Array(repeating: action, count: 3)
         }
-        let store = BaseStore(
+        let store = Store(
             state: TestFakes.CounterTest.State(count: 0),
             reducer: increaseByOneReducer,
             middleware: multiplexingMiddleware,
-            thunk: .init(),
+            thunk: .init { _, _ in Empty().eraseToAnyPublisher() },
+            environment: (),
             publishOn: ImmediateScheduler.shared
         )
 
@@ -112,13 +116,23 @@ class StoreMiddlewareTests: XCTestCase {
      it actions should be multiplied via the increase function
      */
     func testThunkMultiplies() throws {
-        let multiplexingThunk = Thunk<TestFakes.CounterTest.State, TestFakes.SetAction, TestFakes.SetAction> {
-            [$1, $1, $1].publisher.map { .refined($0) }
+        let multiplexingThunk = Thunk<TestFakes.CounterTest.State, TestFakes.SetAction.Raw, TestFakes.SetAction.Refined> { _, action -> AnyPublisher<ActionStrata<TestFakes.SetAction.Raw, TestFakes.SetAction.Refined>, Never> in
+            let transformed: TestFakes.SetAction.Refined
+            switch action {
+            case .noop:
+                transformed = .noop
+            case let .int(value):
+                transformed = .int(value)
+            case let .string(value):
+                transformed = .string(value)
+            }
+            return [transformed, transformed, transformed].publisher.map { .refined($0) }.eraseToAnyPublisher()
         }
-        let store = BaseStore(
+        let store = Store(
             state: TestFakes.CounterTest.State(count: 0),
             reducer: increaseByOneReducer,
             thunk: multiplexingThunk,
+            environment: (),
             publishOn: ImmediateScheduler.shared
         )
 

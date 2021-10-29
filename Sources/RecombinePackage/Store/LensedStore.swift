@@ -1,33 +1,86 @@
 import Combine
+import SwiftUI
 
-public class LensedStore<BaseState: Equatable, SubState: Equatable, RawAction, BaseRefinedAction, SubRefinedAction>: StoreProtocol {
-    public typealias StoreType = BaseStore<BaseState, RawAction, BaseRefinedAction>
-    @Published
-    public private(set) var state: SubState
-    public var statePublisher: Published<SubState>.Publisher { $state }
-    public let underlying: BaseStore<BaseState, RawAction, BaseRefinedAction>
-    public let stateLens: (BaseState) -> SubState
-    public let actionPromotion: (SubRefinedAction) -> BaseRefinedAction
+public struct StoreLens<State: Equatable, RawAction, RefinedAction>: StoreProtocol {
+    public var combineIdentifier: CombineIdentifier = .init()
+    
+    public typealias Action = ActionStrata<RawAction, RefinedAction>
+    public typealias Dispatch = (Bool, Bool, [Action]) -> Void
+    private let _dispatch: Dispatch
+    
+    private var cancellable: AnyCancellable?
+    public var stateSubject: CurrentValueSubject<State, Never>
+    public var state: State {
+        stateSubject.value
+    }
+    public var statePublisher: AnyPublisher<State, Never> {
+        stateSubject.eraseToAnyPublisher()
+    }
 
-    private var cancellables = Set<AnyCancellable>()
-
-    public required init(store: StoreType, lensing lens: @escaping (BaseState) -> SubState, actionPromotion: @escaping (SubRefinedAction) -> BaseRefinedAction) {
-        underlying = store
-        stateLens = lens
-        self.actionPromotion = actionPromotion
-        state = lens(store.state)
-        store.$state
-            .map(lens)
+    public init<StatePublisher: Publisher>(
+        initial: State,
+        statePublisher: StatePublisher,
+        dispatch: @escaping Dispatch
+    )
+    where StatePublisher.Output == State, StatePublisher.Failure == Never {
+        self._dispatch = dispatch
+        stateSubject = .init(initial)
+        cancellable = statePublisher
             .removeDuplicates()
-            .sink { [unowned self] state in
-                self.state = state
-            }
-            .store(in: &cancellables)
+            .sink(receiveValue: stateSubject.send)
+    }
+
+    public func dispatch<S>(
+        serially: Bool,
+        collect: Bool,
+        actions: S
+    )
+    where S: Sequence, S.Element == Action {
+        _dispatch(serially, collect, .init(actions))
     }
 }
 
-public extension LensedStore where BaseRefinedAction == SubRefinedAction {
-    convenience init(store: StoreType, lensing lens: @escaping (BaseState) -> SubState) {
-        self.init(store: store, lensing: lens, actionPromotion: { $0 })
+public class LensedStore<State: Equatable, RawAction, RefinedAction>: StoreProtocol, ObservableObject {
+    public typealias Action = ActionStrata<RawAction, RefinedAction>
+    public typealias Underlying = StoreLens<State, RawAction, RefinedAction>
+
+    private let underlying: Underlying
+    private var cancellable: AnyCancellable?
+
+    @Published public var state: State
+    public var statePublisher: AnyPublisher<State, Never> {
+        $state.eraseToAnyPublisher()
+    }
+
+    public init(from storeLens: Underlying) {
+        underlying = storeLens
+        state = storeLens.stateSubject.value
+        cancellable = storeLens.stateSubject
+            .dropFirst()
+            .assign(to: \.state, on: self)
+    }
+
+    public convenience init<StatePublisher: Publisher>(
+        initial: State,
+        statePublisher: StatePublisher,
+        dispatch: @escaping Underlying.Dispatch
+    )
+    where StatePublisher.Output == State, StatePublisher.Failure == Never {
+        self.init(
+            from: .init(
+                initial: initial,
+                statePublisher: statePublisher,
+                dispatch: dispatch
+            )
+        )
+    }
+
+    public func dispatch<S>(
+        serially: Bool,
+        collect: Bool,
+        actions: S
+    )
+    where S: Sequence, S.Element == Action {
+        underlying.dispatch(serially: serially, collect: collect, actions: actions)
     }
 }

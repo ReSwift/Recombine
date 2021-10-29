@@ -1,28 +1,27 @@
 import Combine
 
-public class AnyStore<BaseState: Equatable, SubState: Equatable, RawAction, BaseRefinedAction, SubRefinedAction>: StoreProtocol {
-    public let underlying: BaseStore<BaseState, RawAction, BaseRefinedAction>
-    public let stateLens: (BaseState) -> SubState
-    public let actionPromotion: (SubRefinedAction) -> BaseRefinedAction
-    private var cancellables = Set<AnyCancellable>()
-    @Published
-    public private(set) var state: SubState
-    public var statePublisher: Published<SubState>.Publisher { $state }
+public class AnyStore<State: Equatable, RawAction, RefinedAction>: StoreProtocol {
+    private let _dispatch: (Bool, Bool, [ActionStrata<RawAction, RefinedAction>]) -> Void
+    private var cancellable: AnyCancellable?
 
-    public required init<Store: StoreProtocol>(_ store: Store)
-        where Store.BaseState == BaseState,
-        Store.SubState == SubState,
-        Store.RawAction == RawAction,
-        Store.BaseRefinedAction == BaseRefinedAction,
-        Store.SubRefinedAction == SubRefinedAction
-    {
-        underlying = store.underlying
-        stateLens = store.stateLens
-        actionPromotion = store.actionPromotion
+    @Published
+    public private(set) var state: State
+    public var statePublisher: AnyPublisher<State, Never> {
+        $state.eraseToAnyPublisher()
+    }
+
+    public init<Store: StoreProtocol>(_ store: Store)
+    where Store.State == State,
+    Store.RawAction == RawAction,
+    Store.RefinedAction == RefinedAction {
         state = store.state
-        store.statePublisher.sink { [weak self] state in
-            self?.state = state
-        }
-        .store(in: &cancellables)
+        _dispatch = store.dispatch
+        cancellable = store.statePublisher
+            .dropFirst()
+            .assign(to: \.state, on: self)
+    }
+
+    public func dispatch<S>(serially: Bool, collect: Bool, actions: S) where S : Sequence, S.Element == Action {
+        _dispatch(serially, collect, .init(actions))
     }
 }

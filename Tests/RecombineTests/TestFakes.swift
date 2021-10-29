@@ -2,14 +2,21 @@ import Foundation
 import Recombine
 
 let dispatchQueue = DispatchQueue.global()
-typealias MainStore = BaseStore<TestFakes.NestedTest.State, TestFakes.NestedTest.Action, TestFakes.NestedTest.Action>
-typealias SubStore<State: Equatable, Action> = LensedStore<TestFakes.NestedTest.State, State, TestFakes.NestedTest.Action, TestFakes.NestedTest.Action, Action>
+typealias MainStore = Store<TestFakes.NestedTest.State, TestFakes.NestedTest.Action, TestFakes.NestedTest.Action>
+typealias SubStore<State: Equatable, Action> = LensedStore<State, TestFakes.NestedTest.Action, Action>
 
 enum TestFakes {
     enum SetAction: Equatable {
-        case noop
-        case int(Int)
-        case string(String)
+        enum Raw: Equatable {
+            case noop
+            case int(Int)
+            case string(String)
+        }
+        enum Refined: Equatable {
+            case noop
+            case int(Int)
+            case string(String)
+        }
     }
 }
 
@@ -39,7 +46,7 @@ extension TestFakes {
             var subState: SubState = .init()
         }
 
-        static let reducer: MutatingReducer<State, Action> = .init { state, action in
+        static let reducer: Reducer<State, Action, Void> = .init { state, action, _ in
             switch action {
             case let .sub(.set(value)):
                 state.subState.value = value
@@ -61,7 +68,7 @@ extension TestFakes {
             var value: String?
         }
 
-        static let reducer = MutatingReducer<State, SetAction> { state, action in
+        static let reducer = Reducer<State, SetAction.Refined, Void> { state, action, _ in
             switch action {
             case let .string(value):
                 state.value = value
@@ -78,7 +85,7 @@ extension TestFakes {
             var value: Int?
         }
 
-        static let reducer = MutatingReducer<State, SetAction> { state, action in
+        static let reducer = Reducer<State, SetAction.Refined, Void> { state, action, _ in
             switch action {
             case let .int(value):
                 state.value = value
