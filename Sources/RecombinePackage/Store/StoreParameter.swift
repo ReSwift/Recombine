@@ -37,22 +37,22 @@ public protocol StoreParameter {
     associatedtype Environment
 
     associatedtype Reducers: ReducerParameter
-    where Reducers.State == States.Main,
-          Reducers.RefinedAction == Action.Refined,
-          Reducers.Environment == Environment
+        where Reducers.State == States.Main,
+        Reducers.RefinedAction == Action.Refined,
+        Reducers.Environment == Environment
 
     associatedtype Middlewares: MiddlewareParameter
-    where Middlewares.State == States.Main,
-          Middlewares.RawAction == Action.Raw,
-          Middlewares.RefinedAction == Action.Refined
+        where Middlewares.State == States.Main,
+        Middlewares.RawAction == Action.Raw,
+        Middlewares.RefinedAction == Action.Refined
 
     associatedtype Thunks: ThunkParameter
-    where Thunks.State == States.Main,
-          Thunks.RawAction == Action.Raw,
-          Thunks.RefinedAction == Action.Refined
+        where Thunks.State == States.Main,
+        Thunks.RawAction == Action.Raw,
+        Thunks.RefinedAction == Action.Refined
 
     associatedtype SideEffects: SideEffectParameter
-    where SideEffects.RefinedAction == Action.Refined
+        where SideEffects.RefinedAction == Action.Refined
 
     associatedtype DeliveryScheduler: Scheduler
 

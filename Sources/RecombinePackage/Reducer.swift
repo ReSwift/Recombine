@@ -13,7 +13,7 @@ public struct Reducer<State, RefinedAction, Environment> {
     public init(_ reducers: Self...) {
         self = .init(reducers)
     }
-    
+
     public init<S: Sequence>(_ reducers: S) where S.Element == Self {
         self = reducers.reduce(.init()) {
             $0.concat($1)

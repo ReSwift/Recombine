@@ -12,6 +12,7 @@ enum TestFakes {
             case int(Int)
             case string(String)
         }
+
         enum Refined: Equatable {
             case noop
             case int(Int)

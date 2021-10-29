@@ -6,7 +6,7 @@ public protocol StoreProtocol: Subscriber {
     associatedtype State: Equatable
     associatedtype RefinedAction
     associatedtype RawAction
-    
+
     var state: State { get }
     var statePublisher: AnyPublisher<State, Never> { get }
     func dispatch<S: Sequence>(serially: Bool, collect: Bool, actions: S) where S.Element == Action

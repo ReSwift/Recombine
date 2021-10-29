@@ -3,16 +3,17 @@ import SwiftUI
 
 public struct StoreLens<State: Equatable, RawAction, RefinedAction>: StoreProtocol {
     public var combineIdentifier: CombineIdentifier = .init()
-    
+
     public typealias Action = ActionStrata<RawAction, RefinedAction>
     public typealias Dispatch = (Bool, Bool, [Action]) -> Void
     private let _dispatch: Dispatch
-    
+
     private var cancellable: AnyCancellable?
     public var stateSubject: CurrentValueSubject<State, Never>
     public var state: State {
         stateSubject.value
     }
+
     public var statePublisher: AnyPublisher<State, Never> {
         stateSubject.eraseToAnyPublisher()
     }
@@ -22,8 +23,9 @@ public struct StoreLens<State: Equatable, RawAction, RefinedAction>: StoreProtoc
         statePublisher: StatePublisher,
         dispatch: @escaping Dispatch
     )
-    where StatePublisher.Output == State, StatePublisher.Failure == Never {
-        self._dispatch = dispatch
+        where StatePublisher.Output == State, StatePublisher.Failure == Never
+    {
+        _dispatch = dispatch
         stateSubject = .init(initial)
         cancellable = statePublisher
             .removeDuplicates()
@@ -35,7 +37,8 @@ public struct StoreLens<State: Equatable, RawAction, RefinedAction>: StoreProtoc
         collect: Bool,
         actions: S
     )
-    where S: Sequence, S.Element == Action {
+        where S: Sequence, S.Element == Action
+    {
         _dispatch(serially, collect, .init(actions))
     }
 }
@@ -65,7 +68,8 @@ public class LensedStore<State: Equatable, RawAction, RefinedAction>: StoreProto
         statePublisher: StatePublisher,
         dispatch: @escaping Underlying.Dispatch
     )
-    where StatePublisher.Output == State, StatePublisher.Failure == Never {
+        where StatePublisher.Output == State, StatePublisher.Failure == Never
+    {
         self.init(
             from: .init(
                 initial: initial,
@@ -80,7 +84,8 @@ public class LensedStore<State: Equatable, RawAction, RefinedAction>: StoreProto
         collect: Bool,
         actions: S
     )
-    where S: Sequence, S.Element == Action {
+        where S: Sequence, S.Element == Action
+    {
         underlying.dispatch(serially: serially, collect: collect, actions: actions)
     }
 }

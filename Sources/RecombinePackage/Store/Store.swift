@@ -77,7 +77,7 @@ public class Store<State: Equatable, RawAction, RefinedAction>: StoreProtocol, O
                     sideEffect.closure($0)
                 })
                 .scan(state) { state, actions in
-                    actions.reduce(state, { reducer.reduce(state: $0, action: $1, environment: environment) })
+                    actions.reduce(state) { reducer.reduce(state: $0, action: $1, environment: environment) }
                 }
                 .prepend(state)
                 .handleEvents(receiveOutput: { _ in
@@ -100,9 +100,10 @@ public class Store<State: Equatable, RawAction, RefinedAction>: StoreProtocol, O
     }
 
     convenience init<Parameters: StoreParameter>(parameters _: Parameters.Type)
-    where State == Parameters.States.Main,
-    RefinedAction == Parameters.Action.Refined,
-    RawAction == Parameters.Action.Raw {
+        where State == Parameters.States.Main,
+        RefinedAction == Parameters.Action.Refined,
+        RawAction == Parameters.Action.Raw
+    {
         self.init(
             state: Parameters.States.initial,
             reducer: Parameters.Reducers.main,

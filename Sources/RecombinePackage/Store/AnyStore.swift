@@ -11,9 +11,10 @@ public class AnyStore<State: Equatable, RawAction, RefinedAction>: StoreProtocol
     }
 
     public init<Store: StoreProtocol>(_ store: Store)
-    where Store.State == State,
-    Store.RawAction == RawAction,
-    Store.RefinedAction == RefinedAction {
+        where Store.State == State,
+        Store.RawAction == RawAction,
+        Store.RefinedAction == RefinedAction
+    {
         state = store.state
         _dispatch = store.dispatch
         cancellable = store.statePublisher
@@ -21,7 +22,7 @@ public class AnyStore<State: Equatable, RawAction, RefinedAction>: StoreProtocol
             .assign(to: \.state, on: self)
     }
 
-    public func dispatch<S>(serially: Bool, collect: Bool, actions: S) where S : Sequence, S.Element == Action {
+    public func dispatch<S>(serially: Bool, collect: Bool, actions: S) where S: Sequence, S.Element == Action {
         _dispatch(serially, collect, .init(actions))
     }
 }
