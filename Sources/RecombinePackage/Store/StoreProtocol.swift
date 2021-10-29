@@ -32,11 +32,23 @@ public extension StoreProtocol {
 
     func lensing<SubState: Equatable, NewRawAction, NewRefinedAction>(
         state stateTransform: @escaping (State) -> SubState,
-        refined refinedActionPromotion: @escaping (NewRefinedAction) -> RefinedAction,
-        raw rawActionPromotion: @escaping (NewRawAction) -> RawAction
+        raw rawActionPromotion: @escaping (NewRawAction) -> RawAction,
+        refined refinedActionPromotion: @escaping (NewRefinedAction) -> RefinedAction
     ) -> LensedStore<SubState, NewRawAction, NewRefinedAction> {
         lensing(
             state: stateTransform,
+            actions: {
+                $0.map(raw: rawActionPromotion, refined: refinedActionPromotion)
+            }
+        )
+    }
+
+    func lensing<NewRawAction, NewRefinedAction>(
+        raw rawActionPromotion: @escaping (NewRawAction) -> RawAction,
+        refined refinedActionPromotion: @escaping (NewRefinedAction) -> RefinedAction
+    ) -> LensedStore<State, NewRawAction, NewRefinedAction> {
+        lensing(
+            state: { $0 },
             actions: {
                 $0.map(raw: rawActionPromotion, refined: refinedActionPromotion)
             }
@@ -106,16 +118,78 @@ public extension StoreProtocol {
     > {
         lensing(state: { $0 }, raw: actionPromotion)
     }
+}
 
+public extension StoreProtocol {
     /// Create a `LensedStore` that cannot be updated with actions.
     func readOnly() -> LensedStore<State, Never, Never> {
-        lensing(refined: { _ -> RefinedAction in })
-            .lensing(raw: { _ -> RawAction in })
+        lensing(raw: { _ -> RawAction in }, refined: { _ -> RefinedAction in })
+    }
+
+    /// Create a `LensedStore` that cannot be updated with actions.
+    func readOnly<NewRefinedAction>(
+        refined transform: @escaping (NewRefinedAction) -> RefinedAction
+    ) -> LensedStore<State, Never, NewRefinedAction> {
+        lensing(raw: { _ -> RawAction in }, refined: transform)
+    }
+
+    /// Create a `LensedStore` that cannot be updated with actions.
+    func readOnly<NewRawAction>(
+        raw transform: @escaping (NewRawAction) -> RawAction
+    ) -> LensedStore<State, NewRawAction, Never> {
+        lensing(raw: transform, refined: { _ -> RefinedAction in })
     }
 
     /// Create an `ActionLens`, which can only send actions.
     func writeOnly() -> ActionLens<RawAction, RefinedAction> {
         ActionLens(dispatchFunction: dispatch)
+    }
+
+    /// Create an `ActionLens`, which can only send actions.
+    func writeOnlyRefined<NewRefinedAction>(
+        refined transform: @escaping (NewRefinedAction) -> RefinedAction
+    ) -> ActionLens<Never, NewRefinedAction> {
+        writeOnly(raw: { _ -> RawAction in }, refined: transform)
+    }
+
+    /// Create an `ActionLens`, which can only send actions.
+    func writeOnlyRaw<NewRawAction>(
+        raw transform: @escaping (NewRawAction) -> RawAction
+    ) -> ActionLens<NewRawAction, Never> {
+        writeOnly(raw: transform, refined: { _ -> RefinedAction in })
+    }
+
+    /// Create an `ActionLens`, which can only send actions.
+    func writeOnly<NewRawAction>(
+        raw transform: @escaping (NewRawAction) -> RawAction
+    ) -> ActionLens<NewRawAction, RefinedAction> {
+        writeOnly(raw: transform, refined: { $0 })
+    }
+
+    /// Create an `ActionLens`, which can only send actions.
+    func writeOnly<NewRefinedAction>(
+        refined transform: @escaping (NewRefinedAction) -> RefinedAction
+    ) -> ActionLens<RawAction, NewRefinedAction> {
+        writeOnly(raw: { $0 }, refined: transform)
+    }
+
+    /// Create an `ActionLens`, which can only send actions.
+    func writeOnly<NewRawAction, NewRefinedAction>(
+        raw rawTransform: @escaping (NewRawAction) -> RawAction,
+        refined refinedTransform: @escaping (NewRefinedAction) -> RefinedAction
+    ) -> ActionLens<NewRawAction, NewRefinedAction> {
+        ActionLens<NewRawAction, NewRefinedAction> {
+            dispatch(
+                serially: $0,
+                collect: $1,
+                actions: $2.map {
+                    $0.map(
+                        raw: rawTransform,
+                        refined: refinedTransform
+                    )
+                }
+            )
+        }
     }
 }
 
