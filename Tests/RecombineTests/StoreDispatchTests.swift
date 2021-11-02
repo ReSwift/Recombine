@@ -133,11 +133,11 @@ class ObservableStoreDispatchTests: XCTestCase {
             state: "",
             reducer: reducer,
             thunk: thunk,
-            sideEffect: .init {
-                $0.flatMap { [$0, $0] }.forEach {
+            sideEffect: .init { actions, _ in
+                actions.flatMap { [$0, $0] }.forEach {
                     sideEffected += $0
                 }
-            },
+            }.debug("s-e"),
             environment: (),
             publishOn: ImmediateScheduler.shared
         )

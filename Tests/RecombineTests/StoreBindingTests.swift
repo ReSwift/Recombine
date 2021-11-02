@@ -47,10 +47,10 @@ private enum Redux: StoreParameter {
     }
 
     enum SideEffects: SideEffectParameter {
-        static let main = SideEffect<Action.Refined>(logging)
+        static let main = SideEffect<Action.Refined, Void>(logging)
 
-        static let logging = SideEffect<Action.Refined> {
-            print($0)
+        static let logging = SideEffect<Action.Refined, Void> { action, _ in
+            print(action)
         }
     }
 
@@ -106,10 +106,10 @@ private enum Redux2: StoreParameter {
     }
 
     enum SideEffects: SideEffectParameter {
-        static let main = SideEffect<Action.Refined>(logging)
+        static let main = SideEffect<Action.Refined, Void>(logging)
 
-        static let logging = SideEffect<Action.Refined> {
-            print($0)
+        static let logging = SideEffect<Action.Refined, Void> { action, _ in
+            print(action)
         }
     }
 

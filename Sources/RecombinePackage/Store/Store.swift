@@ -26,7 +26,7 @@ public class Store<State: Equatable, RawAction, RefinedAction>: StoreProtocol, O
         reducer: Reducer<State, RefinedAction, Environment>,
         middleware: Middleware<State, RawAction, RefinedAction, Environment> = .init(),
         thunk: Thunk<State, RawAction, RefinedAction, Environment> = .init { _, _, _ in Empty() },
-        sideEffect: SideEffect<RefinedAction> = .init(),
+        sideEffect: SideEffect<RefinedAction, Environment> = .init(),
         environment: Environment,
         publishOn scheduler: S
     ) {
@@ -79,7 +79,7 @@ public class Store<State: Equatable, RawAction, RefinedAction>: StoreProtocol, O
         DispatchQueue.global().async {
             self._postMiddlewareRefinedActions
                 .handleEvents(receiveOutput: {
-                    sideEffect.closure($0)
+                    sideEffect.closure($0, environment)
                 })
                 .scan(state) { state, actions in
                     actions.reduce(state) { reducer.reduce(state: $0, action: $1, environment: environment) }

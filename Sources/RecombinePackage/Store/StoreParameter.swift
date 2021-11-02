@@ -8,7 +8,8 @@ public protocol StateParameter {
 
 public protocol SideEffectParameter {
     associatedtype RefinedAction
-    static var main: SideEffect<RefinedAction> { get }
+    associatedtype Environment
+    static var main: SideEffect<RefinedAction, Environment> { get }
 }
 
 public protocol ReducerParameter {
@@ -56,7 +57,8 @@ public protocol StoreParameter {
         Thunks.Environment == Environment
 
     associatedtype SideEffects: SideEffectParameter
-        where SideEffects.RefinedAction == Action.Refined
+        where SideEffects.RefinedAction == Action.Refined,
+        SideEffects.Environment == Environment
 
     associatedtype DeliveryScheduler: Scheduler
 

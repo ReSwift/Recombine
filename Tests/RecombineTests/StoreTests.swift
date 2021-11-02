@@ -98,7 +98,7 @@ class DeInitStore<State: Equatable>: Store<State, TestFakes.SetAction.Raw, TestF
         reducer: Reducer<State, RefinedAction, Environment>,
         middleware _: Middleware<State, RawAction, RefinedAction, Environment> = .init(),
         thunk: Thunk<State, RawAction, RefinedAction, Environment> = .init { _, _, _ in Empty().eraseToAnyPublisher() },
-        sideEffect _: SideEffect<RefinedAction> = .init(),
+        sideEffect _: SideEffect<RefinedAction, Environment> = .init(),
         environment: Environment,
         publishOn scheduler: S
     ) {
