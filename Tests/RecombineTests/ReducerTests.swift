@@ -6,19 +6,19 @@ class MockReducerContainer<Action> {
     var reducer: Reducer<TestFakes.CounterTest.State, Action, Void>!
 
     init() {
-        reducer = .init { _, action, _ in
-            self.calledWithAction.append(action)
+        reducer = .init { [weak self] _, action, _ in
+            self?.calledWithAction.append(action)
         }
     }
 }
 
 let increaseByOneReducer: Reducer<TestFakes.CounterTest.State, TestFakes.SetAction.Refined, Void> = .init { state, _, _ in
     state.count += 1
-}
+}.debug("-_1")
 
 let increaseByTwoReducer: Reducer<TestFakes.CounterTest.State, TestFakes.SetAction.Refined, Void> = .init { state, _, _ in
     state.count += 2
-}
+}.debug("-_2")
 
 class ReducerTests: XCTestCase {
     /**

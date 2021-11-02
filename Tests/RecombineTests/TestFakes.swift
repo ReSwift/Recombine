@@ -52,7 +52,7 @@ extension TestFakes {
             case let .sub(.set(value)):
                 state.subState.value = value
             }
-        }
+        }.debug("-_NestedTest")
     }
 }
 
@@ -76,7 +76,7 @@ extension TestFakes {
             default:
                 break
             }
-        }
+        }.debug("-_StringTest")
     }
 }
 
@@ -93,6 +93,6 @@ extension TestFakes {
             default:
                 break
             }
-        }
+        }.debug("-_IntTest")
     }
 }

@@ -33,11 +33,11 @@ private enum Redux: StoreParameter {
     }
 
     enum Middlewares: MiddlewareParameter {
-        static let main = Middleware<States.Main, Action.Raw, Action.Refined>()
+        static let main = Middleware<States.Main, Action.Raw, Action.Refined, Void>()
     }
 
     enum Thunks: ThunkParameter {
-        static let main = Thunk<States.Main, Action.Raw, Action.Refined> { _, action -> ActionStrata<Action.Raw, Action.Refined>.Publisher in
+        static let main = Thunk<States.Main, Action.Raw, Action.Refined, Void> { _, action, _ -> ActionStrata<Action.Raw, Action.Refined>.Publisher in
             switch action {
             case .noOp:
                 return Empty()
@@ -97,11 +97,11 @@ private enum Redux2: StoreParameter {
     }
 
     enum Middlewares: MiddlewareParameter {
-        static let main = Middleware<States.Main, Action.Raw, Action.Refined>()
+        static let main = Middleware<States.Main, Action.Raw, Action.Refined, Void>()
     }
 
     enum Thunks: ThunkParameter {
-        static let main = Thunk<States.Main, Action.Raw, Action.Refined> { _, _ -> ActionStrata<Action.Raw, Action.Refined>.Publisher in
+        static let main = Thunk<States.Main, Action.Raw, Action.Refined, Void> { _, _, _ -> ActionStrata<Action.Raw, Action.Refined>.Publisher in
         }
     }
 

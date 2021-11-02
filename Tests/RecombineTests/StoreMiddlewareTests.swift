@@ -13,7 +13,7 @@ class StoreMiddlewareTests: XCTestCase {
             state: TestFakes.StringTest.State(),
             reducer: TestFakes.StringTest.reducer,
             middleware: firstMiddleware.appending(secondMiddleware),
-            thunk: .init { _, _ in Empty().eraseToAnyPublisher() },
+            thunk: .init { _, _, _ in Empty().eraseToAnyPublisher() },
             environment: (),
             publishOn: ImmediateScheduler.shared
         )
@@ -32,7 +32,7 @@ class StoreMiddlewareTests: XCTestCase {
      it reruns for dispatching
      */
     func testRedispatch() throws {
-        let middleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction.Raw, TestFakes.SetAction.Refined> { _, action, dispatch -> [TestFakes.SetAction.Refined] in
+        let middleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction.Raw, TestFakes.SetAction.Refined, Void>({ _, action, dispatch, _ -> [TestFakes.SetAction.Refined] in
             switch action {
             case let .string(value):
                 if !value.contains("Middleware") {
@@ -43,12 +43,13 @@ class StoreMiddlewareTests: XCTestCase {
                 break
             }
             return [action]
-        }
+        })
+        .debug("+++")
         let store = Store(
             state: TestFakes.StringTest.State(),
             reducer: TestFakes.StringTest.reducer,
             middleware: middleware,
-            thunk: .init { _, _ in Empty().eraseToAnyPublisher() },
+            thunk: .init { _, _, _ in Empty().eraseToAnyPublisher() },
             environment: (),
             publishOn: ImmediateScheduler.shared
         )
@@ -90,14 +91,14 @@ class StoreMiddlewareTests: XCTestCase {
      it actions should be multiplied via the increase function
      */
     func testMiddlewareMultiplies() throws {
-        let multiplexingMiddleware = Middleware<TestFakes.CounterTest.State, TestFakes.SetAction.Raw, TestFakes.SetAction.Refined> { _, action, _ in
+        let multiplexingMiddleware = Middleware<TestFakes.CounterTest.State, TestFakes.SetAction.Raw, TestFakes.SetAction.Refined, Void>({ _, action, _, _ in
             Array(repeating: action, count: 3)
-        }
+        })
         let store = Store(
             state: TestFakes.CounterTest.State(count: 0),
             reducer: increaseByOneReducer,
             middleware: multiplexingMiddleware,
-            thunk: .init { _, _ in Empty().eraseToAnyPublisher() },
+            thunk: .init { _, _, _ in Empty().eraseToAnyPublisher() },
             environment: (),
             publishOn: ImmediateScheduler.shared
         )
@@ -116,7 +117,7 @@ class StoreMiddlewareTests: XCTestCase {
      it actions should be multiplied via the increase function
      */
     func testThunkMultiplies() throws {
-        let multiplexingThunk = Thunk<TestFakes.CounterTest.State, TestFakes.SetAction.Raw, TestFakes.SetAction.Refined> { _, action -> AnyPublisher<ActionStrata<TestFakes.SetAction.Raw, TestFakes.SetAction.Refined>, Never> in
+        let multiplexingThunk = Thunk<TestFakes.CounterTest.State, TestFakes.SetAction.Raw, TestFakes.SetAction.Refined, Void> { _, action, _ -> AnyPublisher<ActionStrata<TestFakes.SetAction.Raw, TestFakes.SetAction.Refined>, Never> in
             let transformed: TestFakes.SetAction.Refined
             switch action {
             case .noop:
@@ -128,6 +129,7 @@ class StoreMiddlewareTests: XCTestCase {
             }
             return [transformed, transformed, transformed].publisher.map { .refined($0) }.eraseToAnyPublisher()
         }
+        .debug(rawAction: .self, refinedAction: .self)
         let store = Store(
             state: TestFakes.CounterTest.State(count: 0),
             reducer: increaseByOneReducer,

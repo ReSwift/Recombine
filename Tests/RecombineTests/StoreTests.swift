@@ -80,7 +80,7 @@ class DeInitStore<State: Equatable>: Store<State, TestFakes.SetAction.Raw, TestF
     convenience init(
         state: State,
         reducer: Reducer<State, RefinedAction, Void>,
-        thunk: Thunk<State, RawAction, RefinedAction> = .init { _, _ in Empty().eraseToAnyPublisher() },
+        thunk: Thunk<State, RawAction, RefinedAction, Void> = .init { _, _, _ in Empty().eraseToAnyPublisher() },
         deInitAction: @escaping () -> Void
     ) {
         self.init(
@@ -96,8 +96,8 @@ class DeInitStore<State: Equatable>: Store<State, TestFakes.SetAction.Raw, TestF
     override init<S: Scheduler, Environment>(
         state: State,
         reducer: Reducer<State, RefinedAction, Environment>,
-        middleware _: Middleware<State, RawAction, RefinedAction> = .init(),
-        thunk: Thunk<State, RawAction, RefinedAction> = .init { _, _ in Empty().eraseToAnyPublisher() },
+        middleware _: Middleware<State, RawAction, RefinedAction, Environment> = .init(),
+        thunk: Thunk<State, RawAction, RefinedAction, Environment> = .init { _, _, _ in Empty().eraseToAnyPublisher() },
         sideEffect _: SideEffect<RefinedAction> = .init(),
         environment: Environment,
         publishOn scheduler: S

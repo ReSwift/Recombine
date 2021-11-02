@@ -22,14 +22,16 @@ public protocol MiddlewareParameter {
     associatedtype State: Equatable
     associatedtype RawAction
     associatedtype RefinedAction
-    static var main: Middleware<State, RawAction, RefinedAction> { get }
+    associatedtype Environment
+    static var main: Middleware<State, RawAction, RefinedAction, Environment> { get }
 }
 
 public protocol ThunkParameter {
     associatedtype State: Equatable
     associatedtype RawAction
     associatedtype RefinedAction
-    static var main: Thunk<State, RawAction, RefinedAction> { get }
+    associatedtype Environment
+    static var main: Thunk<State, RawAction, RefinedAction, Environment> { get }
 }
 
 public protocol StoreParameter {
@@ -44,12 +46,14 @@ public protocol StoreParameter {
     associatedtype Middlewares: MiddlewareParameter
         where Middlewares.State == States.Main,
         Middlewares.RawAction == Action.Raw,
-        Middlewares.RefinedAction == Action.Refined
+        Middlewares.RefinedAction == Action.Refined,
+        Middlewares.Environment == Environment
 
     associatedtype Thunks: ThunkParameter
         where Thunks.State == States.Main,
         Thunks.RawAction == Action.Raw,
-        Thunks.RefinedAction == Action.Refined
+        Thunks.RefinedAction == Action.Refined,
+        Thunks.Environment == Environment
 
     associatedtype SideEffects: SideEffectParameter
         where SideEffects.RefinedAction == Action.Refined

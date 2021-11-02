@@ -35,10 +35,12 @@ import Combine
 ///
 /// Then, we replace the `URLSession` publisher with the `statePublisher` using `flatMap(_:)`, which itself returns a refined action: `.setModel(MyModel)`.
 
-public struct Thunk<State, Input, Output> {
+public struct Thunk<State, RawAction, RefinedAction, Environment> {
+    public typealias Input = RawAction
+    public typealias Output = RefinedAction
     public typealias StatePublisher = Publishers.First<Published<State>.Publisher>
     public typealias Action = ActionStrata<Input, Output>
-    public typealias Function = (StatePublisher, Input) -> AnyPublisher<Action, Never>
+    public typealias Function = (StatePublisher, Input, Environment) -> AnyPublisher<Action, Never>
     internal let transform: Function
 
     /// Create an empty passthrough `Thunk.`
@@ -49,7 +51,7 @@ public struct Thunk<State, Input, Output> {
     ///
     ///     static let passthroughThunk = Thunk<State, Action.Refined, Action.Refined>()
     public init() where Input == Never {
-        transform = { _, _ -> AnyPublisher<ActionStrata<Input, Output>, Never> in }
+        transform = { _, _, _ -> AnyPublisher<ActionStrata<Input, Output>, Never> in }
     }
 
     /// Initialises the thunk with a closure which handles transforming the raw actions and returning refined actions.
@@ -80,8 +82,12 @@ public struct Thunk<State, Input, Output> {
     ///                     .eraseToAnyPublisher()
     ///
     public init<P: Publisher>(
-        _ transform: @escaping (StatePublisher, Input) -> P
+        _ transform: @escaping (StatePublisher, Input, Environment) -> P
     ) where P.Output == Action, P.Failure == Never {
-        self.transform = { transform($0, $1).eraseToAnyPublisher() }
+        self.transform = { transform($0, $1, $2).eraseToAnyPublisher() }
+    }
+
+    func callAsFunction(state: StatePublisher, input: Input, environment: Environment) -> AnyPublisher<Action, Never> {
+        transform(state, input, environment)
     }
 }

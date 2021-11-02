@@ -11,7 +11,7 @@ class ObservableStoreDispatchTests: XCTestCase {
         case addThrice(String)
     }
 
-    let thunk = Thunk<String, RawAction, String> { _, action -> AnyPublisher
+    let thunk = Thunk<String, RawAction, String, Void> { _, action, _ -> AnyPublisher
         <ActionStrata<RawAction, String>, Never> in
         switch action {
         case let .addTwice(value):

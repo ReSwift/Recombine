@@ -13,7 +13,7 @@ public class Store<State: Equatable, RawAction, RefinedAction>: StoreProtocol, O
     public let stateTransform: (State) -> State = { $0 }
     public let actionPromotion: (RefinedAction) -> RefinedAction = { $0 }
 
-    private let thunk: Thunk<State, RawAction, RefinedAction>
+    private let thunk: (Published<State>.Publisher, RawAction) -> AnyPublisher<Action, Never>
     private let _rawActions = PassthroughSubject<[RawAction], Never>()
     private let _preMiddlewareRefinedActions = PassthroughSubject<[RefinedAction], Never>()
     private let _postMiddlewareRefinedActions = PassthroughSubject<[RefinedAction], Never>()
@@ -24,14 +24,16 @@ public class Store<State: Equatable, RawAction, RefinedAction>: StoreProtocol, O
     public init<S: Scheduler, Environment>(
         state: State,
         reducer: Reducer<State, RefinedAction, Environment>,
-        middleware: Middleware<State, RawAction, RefinedAction> = .init(),
-        thunk: Thunk<State, RawAction, RefinedAction> = .init { _, _ in Empty() },
+        middleware: Middleware<State, RawAction, RefinedAction, Environment> = .init(),
+        thunk: Thunk<State, RawAction, RefinedAction, Environment> = .init { _, _, _ in Empty() },
         sideEffect: SideEffect<RefinedAction> = .init(),
         environment: Environment,
         publishOn scheduler: S
     ) {
         self.state = state
-        self.thunk = thunk
+        self.thunk = {
+            thunk(state: $0.first(), input: $1, environment: environment)
+        }
 
         Publishers.Zip(
             _postMiddlewareRefinedActions,
@@ -49,16 +51,19 @@ public class Store<State: Equatable, RawAction, RefinedAction>: StoreProtocol, O
         .store(in: &cancellables)
 
         _preMiddlewareRefinedActions
-            .flatMap { [weak self] actions in
-                self.publisher()
-                    .flatMap { $0.$state.first() }
+            .flatMap { [$state] actions in
+                $state
+                    .first()
                     .map { (actions, $0) }
             }
             .map { [weak self] actions, previousState in
                 actions.flatMap {
-                    middleware.transform(previousState, $0) { (actions: Action...) in
-                        self?.dispatch(actions: actions)
-                    }
+                    middleware(
+                        state: previousState,
+                        action: $0,
+                        dispatch: { self?.dispatch(actions: $0) },
+                        environment: environment
+                    )
                 }
             }
             .forward(
@@ -165,10 +170,8 @@ public class Store<State: Equatable, RawAction, RefinedAction>: StoreProtocol, O
             case let .raw(actions):
                 self?._rawActions.send(actions)
                 return actions.publisher
-                    .flatMap(maxPublishers: maxPublishers) { [weak self] action in
-                        self.publisher().flatMap {
-                            $0.thunk.transform($0.$state.first(), action)
-                        }
+                    .flatMap(maxPublishers: maxPublishers) { [thunk, $state] in
+                        thunk($state, $0)
                     }
                     .flatMap(maxPublishers: maxPublishers, recurse(actions:))
                     .eraseToAnyPublisher()
