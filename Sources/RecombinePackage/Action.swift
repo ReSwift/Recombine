@@ -1,8 +1,4 @@
 import Combine
-public protocol ActionProtocol {
-    associatedtype Raw
-    associatedtype Refined
-}
 
 public enum ActionStrata<RawAction, RefinedAction> {
     public typealias Raw = RawAction
@@ -11,8 +7,10 @@ public enum ActionStrata<RawAction, RefinedAction> {
 
     case raw([Raw])
     case refined([Refined])
+}
 
-    public var raw: [Raw]? {
+public extension ActionStrata {
+    var raw: [Raw]? {
         switch self {
         case let .raw(action):
             return action
@@ -21,7 +19,7 @@ public enum ActionStrata<RawAction, RefinedAction> {
         }
     }
 
-    public var refined: [Refined]? {
+    var refined: [Refined]? {
         switch self {
         case let .refined(action):
             return action
@@ -30,15 +28,35 @@ public enum ActionStrata<RawAction, RefinedAction> {
         }
     }
 
-    public func map<NewRawAction>(raw transform: (RawAction) -> NewRawAction) -> ActionStrata<NewRawAction, RefinedAction> {
+    var caseName: String {
+        switch self {
+        case .raw:
+            return "raw"
+        case .refined:
+            return "refined"
+        }
+    }
+
+    var actions: [Any] {
+        switch self {
+        case let .raw(actions):
+            return actions
+        case let .refined(actions):
+            return actions
+        }
+    }
+}
+
+public extension ActionStrata {
+    func map<NewRawAction>(raw transform: (RawAction) -> NewRawAction) -> ActionStrata<NewRawAction, RefinedAction> {
         map(raw: transform, refined: { $0 })
     }
 
-    public func map<NewRefinedAction>(refined transform: (RefinedAction) -> NewRefinedAction) -> ActionStrata<RawAction, NewRefinedAction> {
+    func map<NewRefinedAction>(refined transform: (RefinedAction) -> NewRefinedAction) -> ActionStrata<RawAction, NewRefinedAction> {
         map(raw: { $0 }, refined: transform)
     }
 
-    public func map<NewRawAction, NewRefinedAction>(
+    func map<NewRawAction, NewRefinedAction>(
         raw rawTransform: (RawAction) -> NewRawAction,
         refined refinedTransform: (RefinedAction) -> NewRefinedAction
     ) -> ActionStrata<NewRawAction, NewRefinedAction> {

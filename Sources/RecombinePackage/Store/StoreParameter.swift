@@ -1,6 +1,11 @@
 import Combine
 import SwiftUI
 
+public protocol ActionProtocol {
+    associatedtype Raw
+    associatedtype Refined
+}
+
 public protocol StateParameter {
     associatedtype Main
     static var initial: Main { get }
