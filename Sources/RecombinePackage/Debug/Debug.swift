@@ -71,12 +71,8 @@ func debugActionOutput<RawAction, RefinedAction, LocalRawAction, LocalRefinedAct
     actionFormat: ActionFormat
 ) -> String {
     func debugAction(_ action: ActionStrata<RawAction, RefinedAction>) -> (type: String, actions: [Any?]) {
-        switch action.map(raw: toLocalRawAction.extract(from:), refined: toLocalRefinedAction.extract(from:)) {
-        case let .raw(actions):
-            return ("raw", actions)
-        case let .refined(actions):
-            return ("refined", actions)
-        }
+        let local = action.map(raw: toLocalRawAction.extract(from:), refined: toLocalRefinedAction.extract(from:))
+        return (local.caseName, local.actions)
     }
     func printed(action: Any?) -> String {
         action.map {
