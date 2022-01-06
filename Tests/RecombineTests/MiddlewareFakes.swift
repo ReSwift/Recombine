@@ -1,7 +1,7 @@
 import Combine
 import Recombine
 
-let firstMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction.Raw, TestFakes.SetAction.Refined, Void> { _, action, _, _ -> [TestFakes.SetAction.Refined] in
+let firstMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction.Async, TestFakes.SetAction.Sync, Void> { _, action, _, _ -> [TestFakes.SetAction.Sync] in
     switch action {
     case let .string(value):
         return [.string(value + " First Middleware")]
@@ -10,7 +10,7 @@ let firstMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction
     }
 }
 
-let secondMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction.Raw, TestFakes.SetAction.Refined, Void> { _, action, _, _ -> [TestFakes.SetAction.Refined] in
+let secondMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction.Async, TestFakes.SetAction.Sync, Void> { _, action, _, _ -> [TestFakes.SetAction.Sync] in
     switch action {
     case let .string(value):
         return [.string(value + " Second Middleware")]
@@ -19,30 +19,30 @@ let secondMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.SetActio
     }
 }.debug("---")
 
-let stateAccessingMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction.Raw, TestFakes.SetAction.Refined, Void> { state, action, _, _ -> [TestFakes.SetAction.Refined] in
+let stateAccessingMiddleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction.Async, TestFakes.SetAction.Sync, Void> { state, action, _, _ -> [TestFakes.SetAction.Sync] in
     if case let .string(value) = action {
         return [.string(state.value! + state.value!)]
     }
     return [action]
 }
 
-let thunk = Thunk<TestFakes.StringTest.State, TestFakes.ThunkRawAction, TestFakes.SetAction.Refined, Void> { _, action, _ -> Just<ActionStrata<TestFakes.ThunkRawAction, TestFakes.SetAction.Refined>> in
+let thunk = Thunk<TestFakes.StringTest.State, TestFakes.ThunkAsyncAction, TestFakes.SetAction.Sync, Void> { _, action, _ -> Just<EitherAction<TestFakes.ThunkAsyncAction, TestFakes.SetAction.Sync>> in
     switch action {
     case let .first(value):
-        return Just(.raw(.second(value + " First Thunk")))
+        return Just(.async(.second(value + " First Thunk")))
     case let .second(value):
-        return Just(.refined(.string(value + " Second Thunk")))
+        return Just(.sync(.string(value + " Second Thunk")))
     }
 }.debug("thunk")
 
-let stateAccessingThunk = Thunk<TestFakes.StringTest.State, TestFakes.SetAction.Raw, TestFakes.SetAction.Refined, Void> { state, action, _ -> AnyPublisher<ActionStrata<TestFakes.SetAction.Raw, TestFakes.SetAction.Refined>, Never> in
+let stateAccessingThunk = Thunk<TestFakes.StringTest.State, TestFakes.SetAction.Async, TestFakes.SetAction.Sync, Void> { state, action, _ -> AnyPublisher<EitherAction<TestFakes.SetAction.Async, TestFakes.SetAction.Sync>, Never> in
     if case let .string(value) = action {
         return state.map {
-            .refined(.string($0.value! + $0.value!))
+            .sync(.string($0.value! + $0.value!))
         }
         .eraseToAnyPublisher()
     }
-    let transformed: TestFakes.SetAction.Refined
+    let transformed: TestFakes.SetAction.Sync
     switch action {
     case .noop:
         transformed = .noop
@@ -51,5 +51,5 @@ let stateAccessingThunk = Thunk<TestFakes.StringTest.State, TestFakes.SetAction.
     case let .string(value):
         transformed = .string(value)
     }
-    return Just(.refined(transformed)).eraseToAnyPublisher()
+    return Just(.sync(transformed)).eraseToAnyPublisher()
 }.debug("stateAccessingThunk")

@@ -1,5 +1,5 @@
-public struct ActionLens<RawAction, RefinedAction> {
-    public typealias Action = ActionStrata<RawAction, RefinedAction>
+public struct ActionLens<AsyncAction, SyncAction> {
+    public typealias Action = EitherAction<AsyncAction, SyncAction>
     let dispatchFunction: (Bool, Bool, [Action]) -> Void
 
     public func callAsFunction<S: Sequence>(
@@ -13,36 +13,36 @@ public struct ActionLens<RawAction, RefinedAction> {
     public func callAsFunction<S: Sequence>(
         serially: Bool = false,
         collect: Bool = false,
-        refined actions: S
-    ) where S.Element == RefinedAction {
-        dispatchFunction(serially, collect, [.refined(.init(actions))])
+        sync actions: S
+    ) where S.Element == SyncAction {
+        dispatchFunction(serially, collect, [.sync(.init(actions))])
     }
 
     public func callAsFunction<S: Sequence>(
         serially: Bool = false,
         collect: Bool = false,
-        raw actions: S
-    ) where S.Element == RawAction {
-        dispatchFunction(serially, collect, [.raw(.init(actions))])
+        async actions: S
+    ) where S.Element == AsyncAction {
+        dispatchFunction(serially, collect, [.async(.init(actions))])
     }
 }
 
-public extension ActionLens where RawAction == Never, RefinedAction == Void {
+public extension ActionLens where AsyncAction == Never, SyncAction == Void {
     func callAsFunction() {
         dispatchFunction(
             false,
             false,
-            [.refined([()])]
+            [.sync([()])]
         )
     }
 }
 
-public extension ActionLens where RawAction == Void, RefinedAction == Never {
+public extension ActionLens where AsyncAction == Void, SyncAction == Never {
     func callAsFunction() {
         dispatchFunction(
             false,
             false,
-            [.raw([()])]
+            [.async([()])]
         )
     }
 }
@@ -59,16 +59,16 @@ public extension ActionLens {
     func callAsFunction(
         serially: Bool = false,
         collect: Bool = false,
-        refined actions: RefinedAction...
+        sync actions: SyncAction...
     ) {
-        callAsFunction(serially: serially, collect: collect, refined: actions)
+        callAsFunction(serially: serially, collect: collect, sync: actions)
     }
 
     func callAsFunction(
         serially: Bool = false,
         collect: Bool = false,
-        raw actions: RawAction...
+        async actions: AsyncAction...
     ) {
-        callAsFunction(serially: serially, collect: collect, raw: actions)
+        callAsFunction(serially: serially, collect: collect, async: actions)
     }
 }

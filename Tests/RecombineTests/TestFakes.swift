@@ -7,13 +7,13 @@ typealias SubStore<State: Equatable, Action> = LensedStore<State, TestFakes.Nest
 
 enum TestFakes {
     enum SetAction: Equatable {
-        enum Raw: Equatable {
+        enum Async: Equatable {
             case noop
             case int(Int)
             case string(String)
         }
 
-        enum Refined: Equatable {
+        enum Sync: Equatable {
             case noop
             case int(Int)
             case string(String)
@@ -57,7 +57,7 @@ extension TestFakes {
 }
 
 extension TestFakes {
-    enum ThunkRawAction {
+    enum ThunkAsyncAction {
         case first(String)
         case second(String)
     }
@@ -69,7 +69,7 @@ extension TestFakes {
             var value: String?
         }
 
-        static let reducer = Reducer<State, SetAction.Refined, Void> { state, action, _ in
+        static let reducer = Reducer<State, SetAction.Sync, Void> { state, action, _ in
             switch action {
             case let .string(value):
                 state.value = value
@@ -86,7 +86,7 @@ extension TestFakes {
             var value: Int?
         }
 
-        static let reducer = Reducer<State, SetAction.Refined, Void> { state, action, _ in
+        static let reducer = Reducer<State, SetAction.Sync, Void> { state, action, _ in
             switch action {
             case let .int(value):
                 state.value = value

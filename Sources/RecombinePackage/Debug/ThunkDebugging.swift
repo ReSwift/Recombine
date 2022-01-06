@@ -22,7 +22,13 @@ public extension Thunk {
             DebugEnvironment()
         }
     ) -> Self {
-        debug(prefix, rawAction: .self, refinedAction: .self, actionFormat: actionFormat, environment: toDebugEnvironment)
+        debug(
+            prefix,
+            asyncAction: .self,
+            syncAction: .self,
+            actionFormat: actionFormat,
+            environment: toDebugEnvironment
+        )
     }
 
     /// Prints debug messages describing all received local actions.
@@ -31,17 +37,17 @@ public extension Thunk {
     ///
     /// - Parameters:
     ///   - prefix: A string with which to prefix all debug messages.
-    ///   - toLocalRawAction: A case path that filters raw actions that are printed.
-    ///   - toLocalRefinedAction: A case path that filters refined actions that are printed.
+    ///   - toLocalAsyncAction: A case path that filters async actions that are printed.
+    ///   - toLocalSyncAction: A case path that filters sync actions that are printed.
     ///   - toDebugEnvironment: A function that transforms an environment into a debug environment by
     ///     describing a print function and a queue to print from. Defaults to a function that ignores
     ///     the environment and returns a default ``DebugEnvironment`` that uses Swift's `print`
     ///     function and a background queue.
     /// - Returns: A thunk that prints debug messages for all received actions.
-    func debug<LocalRawAction, LocalRefinedAction>(
+    func debug<LocalAsyncAction, LocalSyncAction>(
         _ prefix: String = "",
-        rawAction toLocalRawAction: CasePath<RawAction, LocalRawAction>,
-        refinedAction toLocalRefinedAction: CasePath<RefinedAction, LocalRefinedAction>,
+        asyncAction toLocalAsyncAction: CasePath<AsyncAction, LocalAsyncAction>,
+        syncAction toLocalSyncAction: CasePath<SyncAction, LocalSyncAction>,
         actionFormat: ActionFormat = .prettyPrint,
         environment toDebugEnvironment: @escaping (Environment) -> DebugEnvironment = { _ in
             DebugEnvironment()
@@ -59,10 +65,10 @@ public extension Thunk {
                         },
                         receiveOutput: { action in
                             let description = debugActionOutput(
-                                received: .raw(receivedAction),
+                                received: .async(receivedAction),
                                 produced: [action],
-                                rawAction: toLocalRawAction,
-                                refinedAction: toLocalRefinedAction,
+                                asyncAction: toLocalAsyncAction,
+                                syncAction: toLocalSyncAction,
                                 actionFormat: actionFormat
                             )
                             debugEnvironment.printer("\(printPrefix) produced:\(description)")

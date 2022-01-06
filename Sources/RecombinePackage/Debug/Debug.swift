@@ -63,16 +63,16 @@ extension String {
     }
 }
 
-func debugActionOutput<RawAction, RefinedAction, LocalRawAction, LocalRefinedAction>(
-    received: ActionStrata<RawAction, RefinedAction>,
-    produced: [ActionStrata<RawAction, RefinedAction>],
-    rawAction toLocalRawAction: CasePath<RawAction, LocalRawAction>,
-    refinedAction toLocalRefinedAction: CasePath<RefinedAction, LocalRefinedAction>,
+func debugActionOutput<AsyncAction, SyncAction, LocalAsyncAction, LocalSyncAction>(
+    received: EitherAction<AsyncAction, SyncAction>,
+    produced: [EitherAction<AsyncAction, SyncAction>],
+    asyncAction toLocalAsyncAction: CasePath<AsyncAction, LocalAsyncAction>,
+    syncAction toLocalSyncAction: CasePath<SyncAction, LocalSyncAction>,
     actionFormat: ActionFormat
 ) -> String {
-    func debugAction(_ action: ActionStrata<RawAction, RefinedAction>) -> (type: String, actions: [Any?]) {
-        let local = action.map(raw: toLocalRawAction.extract(from:), refined: toLocalRefinedAction.extract(from:))
-        return (local.caseName, local.actions)
+    func debugAction(_ action: EitherAction<AsyncAction, SyncAction>) -> (type: String, actions: [Any?]) {
+        let local = action.map(async: toLocalAsyncAction.extract(from:), sync: toLocalSyncAction.extract(from:))
+        return (local.caseName, local.allActions)
     }
     func printed(action: Any?) -> String {
         action.map {

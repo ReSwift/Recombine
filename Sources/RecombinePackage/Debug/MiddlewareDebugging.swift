@@ -24,8 +24,8 @@ public extension Middleware {
     ) -> Self {
         debug(
             prefix,
-            rawAction: .self,
-            refinedAction: .self,
+            asyncAction: .self,
+            syncAction: .self,
             actionFormat: actionFormat,
             environment: toDebugEnvironment
         )
@@ -37,17 +37,17 @@ public extension Middleware {
     ///
     /// - Parameters:
     ///   - prefix: A string with which to prefix all debug messages.
-    ///   - toLocalRawAction: A case path that filters raw actions that are printed.
-    ///   - toLocalRefinedAction: A case path that filters refined actions that are printed.
+    ///   - toLocalAsyncAction: A case path that filters async actions that are printed.
+    ///   - toLocalSyncAction: A case path that filters sync actions that are printed.
     ///   - toDebugEnvironment: A function that transforms an environment into a debug environment by
     ///     describing a print function and a queue to print from. Defaults to a function that ignores
     ///     the environment and returns a default ``DebugEnvironment`` that uses Swift's `print`
     ///     function and a background queue.
     /// - Returns: A middleware that prints debug messages for all received actions.
-    func debug<LocalRawAction, LocalRefinedAction>(
+    func debug<LocalAsyncAction, LocalSyncAction>(
         _ prefix: String = "",
-        rawAction toLocalRawAction: CasePath<RawAction, LocalRawAction>,
-        refinedAction toLocalRefinedAction: CasePath<RefinedAction, LocalRefinedAction>,
+        asyncAction toLocalAsyncAction: CasePath<AsyncAction, LocalAsyncAction>,
+        syncAction toLocalSyncAction: CasePath<SyncAction, LocalSyncAction>,
         actionFormat: ActionFormat = .prettyPrint,
         environment toDebugEnvironment: @escaping (Environment) -> DebugEnvironment = { _ in
             DebugEnvironment()
@@ -57,7 +57,7 @@ public extension Middleware {
             let printPrefix = "\(prefix.isEmpty.if(true: "", false: "\(prefix): "))middleware"
 
             return .init(
-                internal: { state, action, dispatch, environment -> [RefinedAction] in
+                internal: { state, action, dispatch, environment -> [SyncAction] in
                     let debugEnvironment = toDebugEnvironment(environment)
                     let transformed = transform(
                         state,
@@ -65,10 +65,10 @@ public extension Middleware {
                         { dispatchedActions in
                             debugEnvironment.queue.async {
                                 let description = debugActionOutput(
-                                    received: .refined(action),
+                                    received: .sync(action),
                                     produced: dispatchedActions,
-                                    rawAction: toLocalRawAction,
-                                    refinedAction: toLocalRefinedAction,
+                                    asyncAction: toLocalAsyncAction,
+                                    syncAction: toLocalSyncAction,
                                     actionFormat: actionFormat
                                 )
                                 debugEnvironment.printer("\(printPrefix) redispatched: \(description)")
@@ -79,10 +79,10 @@ public extension Middleware {
                     )
                     debugEnvironment.queue.async {
                         let description = debugActionOutput(
-                            received: .refined(action),
-                            produced: [.refined(transformed)],
-                            rawAction: toLocalRawAction,
-                            refinedAction: toLocalRefinedAction,
+                            received: .sync(action),
+                            produced: [.sync(transformed)],
+                            asyncAction: toLocalAsyncAction,
+                            syncAction: toLocalSyncAction,
                             actionFormat: actionFormat
                         )
                         debugEnvironment.printer("\(printPrefix) produced: \(description)")

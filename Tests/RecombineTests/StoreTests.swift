@@ -18,7 +18,7 @@ class StoreTests: XCTestCase {
             )
             let recorder = store.recorder
 
-            Just(.refined(.int(100))).subscribe(store)
+            Just(.sync(.int(100))).subscribe(store)
 
             XCTAssertEqual(
                 try wait(for: recorder.next(), timeout: 1).value,
@@ -49,7 +49,7 @@ class StoreTests: XCTestCase {
         )
         let binding3 = store.lensing(
             state: \.subState,
-            refined: { .sub(.set("\($0)3")) }
+            sync: { .sub(.set("\($0)3")) }
         ).binding(
             get: \.value
         )
@@ -70,7 +70,7 @@ class StoreTests: XCTestCase {
 }
 
 // Used for deinitialization test
-class DeInitStore<State: Equatable>: Store<State, TestFakes.SetAction.Raw, TestFakes.SetAction.Refined> {
+class DeInitStore<State: Equatable>: Store<State, TestFakes.SetAction.Async, TestFakes.SetAction.Sync> {
     var deInitAction: (() -> Void)?
 
     deinit {
@@ -79,8 +79,8 @@ class DeInitStore<State: Equatable>: Store<State, TestFakes.SetAction.Raw, TestF
 
     convenience init(
         state: State,
-        reducer: Reducer<State, RefinedAction, Void>,
-        thunk: Thunk<State, RawAction, RefinedAction, Void> = .init { _, _, _ in Empty().eraseToAnyPublisher() },
+        reducer: Reducer<State, SyncAction, Void>,
+        thunk: Thunk<State, AsyncAction, SyncAction, Void> = .init { _, _, _ in Empty().eraseToAnyPublisher() },
         deInitAction: @escaping () -> Void
     ) {
         self.init(
@@ -95,10 +95,10 @@ class DeInitStore<State: Equatable>: Store<State, TestFakes.SetAction.Raw, TestF
 
     override init<S: Scheduler, Environment>(
         state: State,
-        reducer: Reducer<State, RefinedAction, Environment>,
-        middleware _: Middleware<State, RawAction, RefinedAction, Environment> = .init(),
-        thunk: Thunk<State, RawAction, RefinedAction, Environment> = .init { _, _, _ in Empty().eraseToAnyPublisher() },
-        sideEffect _: SideEffect<RefinedAction, Environment> = .init(),
+        reducer: Reducer<State, SyncAction, Environment>,
+        middleware _: Middleware<State, AsyncAction, SyncAction, Environment> = .init(),
+        thunk: Thunk<State, AsyncAction, SyncAction, Environment> = .init { _, _, _ in Empty().eraseToAnyPublisher() },
+        sideEffect _: SideEffect<SyncAction, Environment> = .init(),
         environment: Environment,
         publishOn scheduler: S
     ) {

@@ -6,13 +6,13 @@ import XCTest
 private typealias StoreTestType = Store<TestFakes.IntTest.State, TestFakes.SetAction, TestFakes.SetAction>
 
 class ObservableStoreDispatchTests: XCTestCase {
-    enum RawAction: Equatable {
+    enum AsyncAction: Equatable {
         case addTwice(String)
         case addThrice(String)
     }
 
-    let thunk = Thunk<String, RawAction, String, Void> { _, action, _ -> AnyPublisher
-        <ActionStrata<RawAction, String>, Never> in
+    let thunk = Thunk<String, AsyncAction, String, Void> { _, action, _ -> AnyPublisher
+        <EitherAction<AsyncAction, String>, Never> in
         switch action {
         case let .addTwice(value):
             return Just(value)
@@ -20,12 +20,12 @@ class ObservableStoreDispatchTests: XCTestCase {
                     Just(value)
                         .delay(for: .seconds(0.1), scheduler: DispatchQueue.main)
                 )
-                .map { .refined($0) }
+                .map { .sync($0) }
                 .eraseToAnyPublisher()
         case let .addThrice(value):
-            return Just(.raw(.addTwice(value)))
+            return Just(.async(.addTwice(value)))
                 .append(
-                    Just(.refined(value))
+                    Just(.sync(value))
                         .delay(for: .seconds(0.1), scheduler: DispatchQueue.main)
                 )
                 .eraseToAnyPublisher()
@@ -48,29 +48,29 @@ class ObservableStoreDispatchTests: XCTestCase {
             publishOn: ImmediateScheduler.shared
         )
 
-        let subject = PassthroughSubject<ActionStrata<RawAction, String>, Never>()
-        let rawActionsRecorder = store.rawActions.record()
-        let refinedActionsRecorder = store.postMiddlewareRefinedActions.record()
+        let subject = PassthroughSubject<EitherAction<AsyncAction, String>, Never>()
+        let asyncActionsRecorder = store.asyncActions.record()
+        let syncActionsRecorder = store.postMiddlewareSyncActions.record()
 
         try nextEquals(
             store,
             dropFirst: 2,
             access: {
                 subject.subscribe($0)
-                subject.send(.raw(.addThrice("1")))
+                subject.send(.async(.addThrice("1")))
             },
             keyPath: \.self,
             value: "111"
         )
 
-        let rawExpectation: [RawAction] = [.addThrice("1"), .addTwice("1")]
+        let asyncExpectation: [AsyncAction] = [.addThrice("1"), .addTwice("1")]
         XCTAssertEqual(
-            try wait(for: rawActionsRecorder.prefix(2), timeout: 10),
-            rawExpectation.map { [$0] }
+            try wait(for: asyncActionsRecorder.prefix(2), timeout: 10),
+            asyncExpectation.map { [$0] }
         )
 
         XCTAssertEqual(
-            try wait(for: refinedActionsRecorder.prefix(3), timeout: 10),
+            try wait(for: syncActionsRecorder.prefix(3), timeout: 10),
             "111".map { [String($0)] }
         )
     }
@@ -84,8 +84,8 @@ class ObservableStoreDispatchTests: XCTestCase {
             publishOn: ImmediateScheduler.shared
         )
 
-        let rawActionsRecorder = store.rawActions.record()
-        let refinedActionsRecorder = store.postMiddlewareRefinedActions.record()
+        let asyncActionsRecorder = store.asyncActions.record()
+        let syncActionsRecorder = store.postMiddlewareSyncActions.record()
 
         try prefixEquals(
             store,
@@ -93,11 +93,11 @@ class ObservableStoreDispatchTests: XCTestCase {
             timeout: 10,
             serially: true,
             actions: [
-                .raw(.addTwice("5")),
-                .refined(["0", "0"]),
-                .raw(.addThrice("6")),
-                .raw(.addTwice("2")),
-                .refined("1"),
+                .async(.addTwice("5")),
+                .sync(["0", "0"]),
+                .async(.addThrice("6")),
+                .async(.addTwice("2")),
+                .sync("1"),
             ],
             keyPath: \.self,
             values: [
@@ -113,16 +113,16 @@ class ObservableStoreDispatchTests: XCTestCase {
             ]
         )
 
-        let rawExpectation: [RawAction] = [.addTwice("5"), .addThrice("6"), .addTwice("6"), .addTwice("2")]
+        let asyncExpectation: [AsyncAction] = [.addTwice("5"), .addThrice("6"), .addTwice("6"), .addTwice("2")]
         XCTAssertEqual(
-            try wait(for: rawActionsRecorder.prefix(rawExpectation.count), timeout: 10).flatMap { $0 },
-            rawExpectation
+            try wait(for: asyncActionsRecorder.prefix(asyncExpectation.count), timeout: 10).flatMap { $0 },
+            asyncExpectation
         )
 
-        let refinedExpectation = [["5"], ["5"], ["0", "0"], ["6"], ["6"], ["6"], ["2"], ["2"], ["1"]]
+        let syncExpectation = [["5"], ["5"], ["0", "0"], ["6"], ["6"], ["6"], ["2"], ["2"], ["1"]]
         XCTAssertEqual(
-            try wait(for: refinedActionsRecorder.prefix(refinedExpectation.count), timeout: 10),
-            refinedExpectation
+            try wait(for: syncActionsRecorder.prefix(syncExpectation.count), timeout: 10),
+            syncExpectation
         )
     }
 
@@ -142,8 +142,8 @@ class ObservableStoreDispatchTests: XCTestCase {
             publishOn: ImmediateScheduler.shared
         )
 
-        let rawActionsRecorder = store.rawActions.record()
-        let refinedActionsRecorder = store.postMiddlewareRefinedActions.record()
+        let asyncActionsRecorder = store.asyncActions.record()
+        let syncActionsRecorder = store.postMiddlewareSyncActions.record()
 
         let value = "5500666221"
 
@@ -153,24 +153,24 @@ class ObservableStoreDispatchTests: XCTestCase {
             serially: true,
             collect: true,
             actions: [
-                .raw(.addTwice("5")),
-                .refined(["0", "0"]),
-                .raw(.addThrice("6")),
-                .raw(.addTwice("2")),
-                .refined("1"),
+                .async(.addTwice("5")),
+                .sync(["0", "0"]),
+                .async(.addThrice("6")),
+                .async(.addTwice("2")),
+                .sync("1"),
             ],
             keyPath: \.self,
             value: "5500666221"
         )
 
-        let rawExpectation: [RawAction] = [.addTwice("5"), .addThrice("6"), .addTwice("6"), .addTwice("2")]
+        let asyncExpectation: [AsyncAction] = [.addTwice("5"), .addThrice("6"), .addTwice("6"), .addTwice("2")]
         XCTAssertEqual(
-            try wait(for: rawActionsRecorder.prefix(rawExpectation.count), timeout: 10).flatMap { $0 },
-            rawExpectation
+            try wait(for: asyncActionsRecorder.prefix(asyncExpectation.count), timeout: 10).flatMap { $0 },
+            asyncExpectation
         )
 
         XCTAssertEqual(
-            try wait(for: refinedActionsRecorder.next(), timeout: 10),
+            try wait(for: syncActionsRecorder.next(), timeout: 10),
             value.map { String($0) }
         )
 

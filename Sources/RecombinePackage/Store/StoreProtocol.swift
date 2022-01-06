@@ -2,10 +2,10 @@ import Combine
 import SwiftUI
 
 public protocol StoreProtocol: Subscriber {
-    typealias Action = ActionStrata<RawAction, RefinedAction>
+    typealias Action = EitherAction<AsyncAction, SyncAction>
     associatedtype State: Equatable
-    associatedtype RefinedAction
-    associatedtype RawAction
+    associatedtype SyncAction
+    associatedtype AsyncAction
 
     var state: State { get }
     var statePublisher: AnyPublisher<State, Never> { get }
@@ -13,10 +13,10 @@ public protocol StoreProtocol: Subscriber {
 }
 
 public extension StoreProtocol {
-    func lensing<SubState: Equatable, NewRawAction, NewRefinedAction>(
+    func lensing<SubState: Equatable, NewAsyncAction, NewSyncAction>(
         state stateTransform: @escaping (State) -> SubState,
-        actions actionPromotion: @escaping (ActionStrata<NewRawAction, NewRefinedAction>) -> Action
-    ) -> LensedStore<SubState, NewRawAction, NewRefinedAction> {
+        actions actionPromotion: @escaping (EitherAction<NewAsyncAction, NewSyncAction>) -> Action
+    ) -> LensedStore<SubState, NewAsyncAction, NewSyncAction> {
         .init(
             initial: stateTransform(state),
             statePublisher: statePublisher.map(stateTransform),
@@ -30,51 +30,51 @@ public extension StoreProtocol {
         )
     }
 
-    func lensing<SubState: Equatable, NewRawAction, NewRefinedAction>(
+    func lensing<SubState: Equatable, NewAsyncAction, NewSyncAction>(
         state stateTransform: @escaping (State) -> SubState,
-        raw rawActionPromotion: @escaping (NewRawAction) -> RawAction,
-        refined refinedActionPromotion: @escaping (NewRefinedAction) -> RefinedAction
-    ) -> LensedStore<SubState, NewRawAction, NewRefinedAction> {
+        sync asyncActionPromotion: @escaping (NewAsyncAction) -> AsyncAction,
+        async syncActionPromotion: @escaping (NewSyncAction) -> SyncAction
+    ) -> LensedStore<SubState, NewAsyncAction, NewSyncAction> {
         lensing(
             state: stateTransform,
             actions: {
-                $0.map(raw: rawActionPromotion, refined: refinedActionPromotion)
+                $0.map(async: asyncActionPromotion, sync: syncActionPromotion)
             }
         )
     }
 
-    func lensing<NewRawAction, NewRefinedAction>(
-        raw rawActionPromotion: @escaping (NewRawAction) -> RawAction,
-        refined refinedActionPromotion: @escaping (NewRefinedAction) -> RefinedAction
-    ) -> LensedStore<State, NewRawAction, NewRefinedAction> {
+    func lensing<NewAsyncAction, NewSyncAction>(
+        async asyncActionPromotion: @escaping (NewAsyncAction) -> AsyncAction,
+        sync syncActionPromotion: @escaping (NewSyncAction) -> SyncAction
+    ) -> LensedStore<State, NewAsyncAction, NewSyncAction> {
         lensing(
             state: { $0 },
             actions: {
-                $0.map(raw: rawActionPromotion, refined: refinedActionPromotion)
+                $0.map(async: asyncActionPromotion, sync: syncActionPromotion)
             }
         )
     }
 
-    func lensing<SubState: Equatable, NewRefinedAction>(
+    func lensing<SubState: Equatable, NewSyncAction>(
         state stateTransform: @escaping (State) -> SubState,
-        refined refinedActionPromotion: @escaping (NewRefinedAction) -> RefinedAction
-    ) -> LensedStore<SubState, RawAction, NewRefinedAction> {
+        sync syncActionPromotion: @escaping (NewSyncAction) -> SyncAction
+    ) -> LensedStore<SubState, AsyncAction, NewSyncAction> {
         lensing(
             state: stateTransform,
             actions: {
-                $0.map(refined: refinedActionPromotion)
+                $0.map(sync: syncActionPromotion)
             }
         )
     }
 
-    func lensing<SubState: Equatable, NewRawAction>(
+    func lensing<SubState: Equatable, NewAsyncAction>(
         state stateTransform: @escaping (State) -> SubState,
-        raw rawActionPromotion: @escaping (NewRawAction) -> RawAction
-    ) -> LensedStore<SubState, NewRawAction, RefinedAction> {
+        async asyncActionPromotion: @escaping (NewAsyncAction) -> AsyncAction
+    ) -> LensedStore<SubState, NewAsyncAction, SyncAction> {
         lensing(
             state: stateTransform,
             actions: {
-                $0.map(raw: rawActionPromotion)
+                $0.map(async: asyncActionPromotion)
             }
         )
     }
@@ -83,109 +83,109 @@ public extension StoreProtocol {
         state stateTransform: @escaping (State) -> SubState
     ) -> LensedStore<
         SubState,
-        RawAction,
-        RefinedAction
+        AsyncAction,
+        SyncAction
     > {
         lensing(state: stateTransform, actions: { $0 })
     }
 
-    func lensing<NewRawAction, NewRefinedAction>(
-        actions actionPromotion: @escaping (ActionStrata<NewRawAction, NewRefinedAction>) -> Action
+    func lensing<NewAsyncAction, NewSyncAction>(
+        actions actionPromotion: @escaping (EitherAction<NewAsyncAction, NewSyncAction>) -> Action
     ) -> LensedStore<
         State,
-        NewRawAction,
-        NewRefinedAction
+        NewAsyncAction,
+        NewSyncAction
     > {
         lensing(state: { $0 }, actions: actionPromotion)
     }
 
-    func lensing<NewRefinedAction>(
-        refined actionPromotion: @escaping (NewRefinedAction) -> RefinedAction
+    func lensing<NewSyncAction>(
+        sync actionPromotion: @escaping (NewSyncAction) -> SyncAction
     ) -> LensedStore<
         State,
-        RawAction,
-        NewRefinedAction
+        AsyncAction,
+        NewSyncAction
     > {
-        lensing(state: { $0 }, refined: actionPromotion)
+        lensing(state: { $0 }, sync: actionPromotion)
     }
 
-    func lensing<NewRawAction>(
-        raw actionPromotion: @escaping (NewRawAction) -> RawAction
+    func lensing<NewAsyncAction>(
+        async actionPromotion: @escaping (NewAsyncAction) -> AsyncAction
     ) -> LensedStore<
         State,
-        NewRawAction,
-        RefinedAction
+        NewAsyncAction,
+        SyncAction
     > {
-        lensing(state: { $0 }, raw: actionPromotion)
+        lensing(state: { $0 }, async: actionPromotion)
     }
 }
 
 public extension StoreProtocol {
     /// Create a `LensedStore` that cannot be updated with actions.
     func readOnly() -> LensedStore<State, Never, Never> {
-        lensing(raw: { _ -> RawAction in }, refined: { _ -> RefinedAction in })
+        lensing(async: { _ -> AsyncAction in }, sync: { _ -> SyncAction in })
     }
 
     /// Create a `LensedStore` that cannot be updated with actions.
-    func readOnly<NewRefinedAction>(
-        refined transform: @escaping (NewRefinedAction) -> RefinedAction
-    ) -> LensedStore<State, Never, NewRefinedAction> {
-        lensing(raw: { _ -> RawAction in }, refined: transform)
+    func readOnly<NewSyncAction>(
+        sync transform: @escaping (NewSyncAction) -> SyncAction
+    ) -> LensedStore<State, Never, NewSyncAction> {
+        lensing(async: { _ -> AsyncAction in }, sync: transform)
     }
 
     /// Create a `LensedStore` that cannot be updated with actions.
-    func readOnly<NewRawAction>(
-        raw transform: @escaping (NewRawAction) -> RawAction
-    ) -> LensedStore<State, NewRawAction, Never> {
-        lensing(raw: transform, refined: { _ -> RefinedAction in })
+    func readOnly<NewAsyncAction>(
+        async transform: @escaping (NewAsyncAction) -> AsyncAction
+    ) -> LensedStore<State, NewAsyncAction, Never> {
+        lensing(async: transform, sync: { _ -> SyncAction in })
     }
 
     /// Create an `ActionLens`, which can only send actions.
-    func writeOnly() -> ActionLens<RawAction, RefinedAction> {
+    func writeOnly() -> ActionLens<AsyncAction, SyncAction> {
         ActionLens(dispatchFunction: dispatch)
     }
 
-    /// Create an `ActionLens`, which can only send actions.
-    func writeOnlyRefined<NewRefinedAction>(
-        _ transform: @escaping (NewRefinedAction) -> RefinedAction
-    ) -> ActionLens<Never, NewRefinedAction> {
-        writeOnly(raw: { _ -> RawAction in }, refined: transform)
+    /// Create an `ActionLens`, which can only send sync actions.
+    func writeOnlySync<NewSyncAction>(
+        _ transform: @escaping (NewSyncAction) -> SyncAction
+    ) -> ActionLens<Never, NewSyncAction> {
+        writeOnly(async: { _ -> AsyncAction in }, sync: transform)
+    }
+
+    /// Create an `ActionLens`, which can only send async actions.
+    func writeOnlyAsync<NewAsyncAction>(
+        _ transform: @escaping (NewAsyncAction) -> AsyncAction
+    ) -> ActionLens<NewAsyncAction, Never> {
+        writeOnly(async: transform, sync: { _ -> SyncAction in })
     }
 
     /// Create an `ActionLens`, which can only send actions.
-    func writeOnlyRaw<NewRawAction>(
-        _ transform: @escaping (NewRawAction) -> RawAction
-    ) -> ActionLens<NewRawAction, Never> {
-        writeOnly(raw: transform, refined: { _ -> RefinedAction in })
+    func writeOnly<NewAsyncAction>(
+        async transform: @escaping (NewAsyncAction) -> AsyncAction
+    ) -> ActionLens<NewAsyncAction, SyncAction> {
+        writeOnly(async: transform, sync: { $0 })
     }
 
     /// Create an `ActionLens`, which can only send actions.
-    func writeOnly<NewRawAction>(
-        raw transform: @escaping (NewRawAction) -> RawAction
-    ) -> ActionLens<NewRawAction, RefinedAction> {
-        writeOnly(raw: transform, refined: { $0 })
+    func writeOnly<NewSyncAction>(
+        sync transform: @escaping (NewSyncAction) -> SyncAction
+    ) -> ActionLens<AsyncAction, NewSyncAction> {
+        writeOnly(async: { $0 }, sync: transform)
     }
 
     /// Create an `ActionLens`, which can only send actions.
-    func writeOnly<NewRefinedAction>(
-        refined transform: @escaping (NewRefinedAction) -> RefinedAction
-    ) -> ActionLens<RawAction, NewRefinedAction> {
-        writeOnly(raw: { $0 }, refined: transform)
-    }
-
-    /// Create an `ActionLens`, which can only send actions.
-    func writeOnly<NewRawAction, NewRefinedAction>(
-        raw rawTransform: @escaping (NewRawAction) -> RawAction,
-        refined refinedTransform: @escaping (NewRefinedAction) -> RefinedAction
-    ) -> ActionLens<NewRawAction, NewRefinedAction> {
-        ActionLens<NewRawAction, NewRefinedAction> {
+    func writeOnly<NewAsyncAction, NewSyncAction>(
+        async asyncTransform: @escaping (NewAsyncAction) -> AsyncAction,
+        sync syncTransform: @escaping (NewSyncAction) -> SyncAction
+    ) -> ActionLens<NewAsyncAction, NewSyncAction> {
+        ActionLens<NewAsyncAction, NewSyncAction> {
             dispatch(
                 serially: $0,
                 collect: $1,
                 actions: $2.map {
                     $0.map(
-                        raw: rawTransform,
-                        refined: refinedTransform
+                        async: asyncTransform,
+                        sync: syncTransform
                     )
                 }
             )
@@ -205,40 +205,44 @@ public extension StoreProtocol {
     func dispatch<S: Sequence>(
         serially: Bool = false,
         collect: Bool = false,
-        raw actions: S
-    ) where S.Element == RawAction {
+        async actions: S
+    ) where S.Element == AsyncAction {
         dispatch(
             serially: serially,
             collect: collect,
-            actions: .raw(.init(actions))
+            actions: .async(.init(actions))
         )
     }
 
     func dispatch(
         serially: Bool = false,
         collect: Bool = false,
-        raw actions: RawAction...
+        async actions: AsyncAction...
     ) {
-        dispatch(serially: serially, collect: collect, actions: .raw(actions))
+        dispatch(serially: serially, collect: collect, actions: .async(actions))
     }
 
-    func dispatch<S: Sequence>(refined actions: S) where S.Element == RefinedAction {
-        dispatch(actions: .refined(.init(actions)))
+    func dispatch<S: Sequence>(
+        sync actions: S
+    ) where S.Element == SyncAction {
+        dispatch(actions: .sync(.init(actions)))
     }
 
-    func dispatch(refined actions: RefinedAction...) {
-        dispatch(actions: .refined(actions))
+    func dispatch(
+        sync actions: SyncAction...
+    ) {
+        dispatch(actions: .sync(actions))
     }
 }
 
-public extension StoreProtocol where RefinedAction == () {
-    func dispatchRefined() {
-        dispatch(refined: ())
+public extension StoreProtocol where SyncAction == () {
+    func dispatchSync() {
+        dispatch(sync: ())
     }
 }
 
 public extension StoreProtocol {
-    func eraseToAnyStore() -> AnyStore<State, RawAction, RefinedAction> {
+    func eraseToAnyStore() -> AnyStore<State, AsyncAction, SyncAction> {
         AnyStore(self)
     }
 }

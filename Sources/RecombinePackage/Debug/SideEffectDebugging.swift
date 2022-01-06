@@ -69,7 +69,7 @@ public extension SideEffect {
     /// - Returns: A side-effect that prints debug messages for all received actions.
     func debug<LocalAction>(
         _ prefix: String = "",
-        action toLocalAction: CasePath<RefinedAction, LocalAction>,
+        action toLocalAction: CasePath<SyncAction, LocalAction>,
         actionFormat: ActionFormat = .prettyPrint,
         environment toDebugEnvironment: @escaping (Environment) -> DebugEnvironment = { _ in
             DebugEnvironment()
@@ -80,10 +80,10 @@ public extension SideEffect {
                 let debugEnvironment = toDebugEnvironment(environment)
                 debugEnvironment.queue.async {
                     let debugOutput = debugActionOutput(
-                        received: ActionStrata<Never, RefinedAction>.refined(action),
+                        received: EitherAction<Never, SyncAction>.sync(action),
                         produced: [],
-                        rawAction: .self,
-                        refinedAction: toLocalAction,
+                        asyncAction: .self,
+                        syncAction: toLocalAction,
                         actionFormat: actionFormat
                     )
                     debugEnvironment.printer(

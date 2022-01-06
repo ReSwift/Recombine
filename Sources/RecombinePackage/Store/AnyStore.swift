@@ -1,7 +1,7 @@
 import Combine
 
-public class AnyStore<State: Equatable, RawAction, RefinedAction>: StoreProtocol {
-    private let _dispatch: (Bool, Bool, [ActionStrata<RawAction, RefinedAction>]) -> Void
+public class AnyStore<State: Equatable, AsyncAction, SyncAction>: StoreProtocol {
+    private let _dispatch: (Bool, Bool, [EitherAction<AsyncAction, SyncAction>]) -> Void
     private var cancellable: AnyCancellable?
 
     @Published
@@ -12,8 +12,8 @@ public class AnyStore<State: Equatable, RawAction, RefinedAction>: StoreProtocol
 
     public init<Store: StoreProtocol>(_ store: Store)
         where Store.State == State,
-        Store.RawAction == RawAction,
-        Store.RefinedAction == RefinedAction
+        Store.AsyncAction == AsyncAction,
+        Store.SyncAction == SyncAction
     {
         state = store.state
         _dispatch = store.dispatch

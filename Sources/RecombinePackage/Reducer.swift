@@ -1,5 +1,5 @@
-public struct Reducer<State, RefinedAction, Environment> {
-    public typealias Transform = (_ state: inout State, _ action: RefinedAction, _ environment: Environment) -> Void
+public struct Reducer<State, SyncAction, Environment> {
+    public typealias Transform = (_ state: inout State, _ action: SyncAction, _ environment: Environment) -> Void
     public let transform: Transform
 
     public init() {
@@ -20,7 +20,7 @@ public struct Reducer<State, RefinedAction, Environment> {
         }
     }
 
-    public func callAsFunction(state: inout State, action: RefinedAction, environment: Environment) {
+    public func callAsFunction(state: inout State, action: SyncAction, environment: Environment) {
         transform(&state, action, environment)
     }
 
@@ -31,7 +31,7 @@ public struct Reducer<State, RefinedAction, Environment> {
         }
     }
 
-    public func reduce(state: State, action: RefinedAction, environment: Environment) -> State {
+    public func reduce(state: State, action: SyncAction, environment: Environment) -> State {
         var s = state
         transform(&s, action, environment)
         return s

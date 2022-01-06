@@ -14,7 +14,7 @@ At the time of writing this document, Swift does not yet have default `Codable` 
 A non-comprehensive list of benefits:
 - **Type-safe**: Recombine uses concrete types, not protocols, for its actions. If you're using enums for your actions (and you should), switch cases will alert you to all of the locations that need updating whenever you make changes to your implementation.
 - **Screenshotting**: Since your entire app state is driven by actions, you can serialise lists of actions into JSON, pipe them into the app via XCUITest environment variables, and deserialise them into lists of actions to be applied after pressing a single clear overlay button on top of your entire view hierarcy (which notifies the application that you've taken a screenshot and it can continue). No fussing about with button labels and writing specific logic that will break with UI redesigns.
-- **Replay**: When a user experiences a bug, they can send you a bug report with all of the actions taken up to that point in the application included (please make sure to fuzz out user-sensitive data when collecting these actions). By keeping a `[TimeInterval: [RefinedAction]]` object for use in debugging into which you record your actions (the time interval being the amount of seconds elapsed since the app started), you can replay these actions using a custom handler and see the weird timing bugs that somehow users are amazing at creating, but developers are rarely able to reproduce.
+- **Replay**: When a user experiences a bug, they can send you a bug report with all of the actions taken up to that point in the application included (please make sure to fuzz out user-sensitive data when collecting these actions). By keeping a `[TimeInterval: [SyncAction]]` object for use in debugging into which you record your actions (the time interval being the amount of seconds elapsed since the app started), you can replay these actions using a custom handler and see the weird timing bugs that somehow users are amazing at creating, but developers are rarely able to reproduce.
 - **Lensing**: Since Recombine dictates that the structure of your code should be like a type-pyramid, it can get rather awkward when you're twelve views down in the stack having to access `state.user.config.information.name.displayName` and update it using `.config(.user(.info(.name(.displayName("Evan Czaplicki")))))`. That's where lensing comes in! Using the power of `@StateObject`, you can inject lensed stores that can only access a subset of the state, and only send a subset of actions, as per their needs. You can inject as many lensed stores as you like, which allows for hassle free lensing into your user state, navigation state, and so on, using multiple `LensedStore` types in any view that requires access to multiple deep nested locations. An added benefit to lensing is that your view won't be refreshed by irrelevant changes to the outer state, since lensed states are required to be `Equatable`.
 
 # About Recombine
@@ -23,8 +23,8 @@ Recombine relies on four principles:
 - **The Store** stores your entire app state in the form of a single data structure. This state can only be modified by dispatching Actions to the store. Whenever the state in the store changes, the store will notify all observers.
 - **Actions** are a declarative way of describing a state change. Actions don't contain any code, they are consumed by the store and forwarded to reducers. Reducers will handle the actions by implementing a different state change for each action.
 - **Reducers** provide pure functions that create a new app state from actions and the current app state. These are your business and navigation logic routers.
-- **Thunk** is a transformative type that lets you go from unrefined actions to refined ones, allowing for asynchronous calls and shortcut expansion of one action into many. Middleware is perfect for extracting records from databases or servers.
-- **Middleware** is a type that lets you add or remove actions before they flow to the reducer, as well as redispatch actions so that they can flow through the middleware chain.
+- **Thunk** is a transformative type that lets you go from asynchronous actions to synchronous ones, allowing for asynchronous calls and shortcut expansion of one action into many. Thunk is perfect for extracting records from databases or servers.
+- **Middleware** is a type that lets you add or remove actions before they flow to the reducer, as well as redispatch actions so that they can flow again through the chain.
 
 ![Recombine flow diagram](Docs/img/recombine-diagram.svg)
 
@@ -45,7 +45,7 @@ You would also define your actions. For the simple actions in this example we ca
 // Use enums for your actions to ensure a well typed implementation.
 extension Redux {
     enum Action {
-        enum Refined {
+        enum Sync {
             case modify(Modification)
             case setText(String?)
             
@@ -56,10 +56,19 @@ extension Redux {
             }
         }
 
-        enum Raw {
+        enum Async {
             case networkCall(URL)
             case reset
         }
+    }
+}
+```
+
+```swift
+// Also create an environment type for any data needed by all elements.
+extension Redux {
+    struct Environment {
+        let queue: DispatchQueue
     }
 }
 ```
@@ -71,7 +80,7 @@ Your reducer needs to respond to these different actions, that can be done by sw
 ```swift
 extension Redux {
     enum Reducer {
-        static let main = MutatingReducer<State, Action.Refined> { state, action in
+        static let main = Reducer<State, Action.Sync, Environment> { state, action, _ in
             switch action {
             case let .modify(action):
                 state.counter = modification(state: state.counter, action: action)
@@ -80,26 +89,26 @@ extension Redux {
             }
         }
 
-        static let modification = PureReducer<Int, Action.Refined.Modification> { state, action in
+        static let modification = Reducer<Int, Action.Sync.Modification, Environment> { state, action, _ in
             switch action {
             case .increase:
-                return state + 1
+                state += 1
             case .decrease:
-                return state - 1
+                state -= 1
             case let .set(value):
-                return value
+                state = value
             }
         }
     }
 }
 ```
 
-We also need `Thunk` to intercept our "raw" actions and convert them into "refined" ones.
+We also need `Thunk` to intercept our asynchronous actions and convert them into synchronous ones.
 Here we can do asynchronous operations like network requests and aggregate operations like resetting the state.
 
 ```swift
 extension Redux {
-    static let thunk: Thunk<State, Action.Raw, Action.Refined> = .init { state, action -> AnyPublisher<Action.Refined, Never> in
+    static let thunk: Thunk<State, Action.Sync, Action.Async, Environment> = .init { state, action, _ -> AnyPublisher<EitherAction<Action.Async, Action.Sync>, Never> in
         switch action {
         case let .networkCall(url):
             return URLSession.shared
@@ -112,12 +121,14 @@ extension Redux {
                 .catch { error in
                     Just(.setText(error.localizedDescription))
                 }
+                .map { .sync($0) }
                 .eraseToAnyPublisher()
         case .reset:
             return [
                 .modify(.set(0)),
                 .setText(nil)
             ]
+            .map { .sync($0) }
             .publisher
             .eraseToAnyPublisher()
         }
@@ -129,8 +140,8 @@ To maintain our state and delegate the actions to the reducers, we need a store.
 
 ```swift
 // It's recommended to create typealiases
-typealias Store = BaseStore<Redux.State, Redux.Action.Raw, Redux.Action.Refined>
-typealias SubStore<SubState: Equatable, SubAction> = LensedStore<Redux.State, SubState, Redux.Action.Raw, Redux.Action.Refined, SubAction>
+typealias Store = BaseStore<Redux.State, Redux.Action.Async, Redux.Action.Sync>
+typealias SubStore<SubState: Equatable, SubAction> = LensedStore<Redux.State, SubState, Redux.Action.Async, Redux.Action.Sync, SubAction>
 
 extension Redux {
     static let store = Store(
@@ -175,7 +186,7 @@ Lensed states are required to be `Equatable`, which means that not only will you
 ```swift
 struct ContentView: View {
     @EnvironmentObject var store: Store
-    @EnvironmentObject var counterStore: SubStore<Int, Redux.Action.Refined.Modification>
+    @EnvironmentObject var counterStore: SubStore<Int, Redux.Action.Sync.Modification>
     @EnvironmentObject var textStore: SubStore<String?, String?>
     
     var body: some View {
@@ -186,21 +197,21 @@ struct ContentView: View {
             Text("\(counterStore.state)")
             HStack {
                 Button(action: {
-                    store.dispatch(refined: .modify(.decrease))
+                    store.dispatch(sync: .modify(.decrease))
                 }, label: {
                     Image(systemName: "minus.circle")
                 })
                 Button(action: {
-                    counterStore.dispatch(refined: .increase)
+                    counterStore.dispatch(sync: .increase)
                 }, label: {
                     Image(systemName: "plus.circle")
                 })
             }
             Button("Network request") {
-                store.dispatch(raw: .networkCall(URL(string: "https://www.google.com")!))
+                store.dispatch(async: .networkCall(URL(string: "https://www.google.com")!))
             }
             Button("Reset") {
-                store.dispatch(raw: .reset)
+                store.dispatch(async: .reset)
             }
         }
     }

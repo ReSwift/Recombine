@@ -73,7 +73,7 @@ public extension Reducer {
     func debug<LocalState, LocalAction>(
         _ prefix: String = "",
         state toLocalState: @escaping (State) -> LocalState,
-        action toLocalAction: CasePath<RefinedAction, LocalAction>,
+        action toLocalAction: CasePath<SyncAction, LocalAction>,
         actionFormat: ActionFormat = .prettyPrint,
         environment toDebugEnvironment: @escaping (Environment) -> DebugEnvironment = { _ in
             DebugEnvironment()
@@ -87,10 +87,10 @@ public extension Reducer {
                 let debugEnvironment = toDebugEnvironment(environment)
                 debugEnvironment.queue.async {
                     let debugOutput = debugActionOutput(
-                        received: ActionStrata<Never, RefinedAction>.refined(action),
+                        received: EitherAction<Never, SyncAction>.sync(action),
                         produced: [],
-                        rawAction: .self,
-                        refinedAction: toLocalAction,
+                        asyncAction: .self,
+                        syncAction: toLocalAction,
                         actionFormat: actionFormat
                     )
                     let stateOutput = (LocalState.self == Void.self).if(

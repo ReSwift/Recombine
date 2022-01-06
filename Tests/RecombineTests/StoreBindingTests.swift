@@ -8,11 +8,11 @@ private typealias StoreTestType = Store<TestFakes.IntTest.State, TestFakes.SetAc
 
 private enum Redux: StoreParameter {
     enum Action: ActionProtocol {
-        enum Raw {
+        enum Async {
             case noOp
         }
 
-        enum Refined: BindableAction {
+        enum Sync: BindableAction {
             case goToFirstScreen
             case goToSecondScreen
             case binding(BindingAction<States.Main>)
@@ -20,7 +20,7 @@ private enum Redux: StoreParameter {
     }
 
     enum Reducers: ReducerParameter {
-        static let main = Reducer<States.Main, Action.Refined, Void> { state, action, _ in
+        static let main = Reducer<States.Main, Action.Sync, Void> { state, action, _ in
             switch action {
             case .goToFirstScreen:
                 state.screen = .primary
@@ -33,11 +33,11 @@ private enum Redux: StoreParameter {
     }
 
     enum Middlewares: MiddlewareParameter {
-        static let main = Middleware<States.Main, Action.Raw, Action.Refined, Void>()
+        static let main = Middleware<States.Main, Action.Async, Action.Sync, Void>()
     }
 
     enum Thunks: ThunkParameter {
-        static let main = Thunk<States.Main, Action.Raw, Action.Refined, Void> { _, action, _ -> ActionStrata<Action.Raw, Action.Refined>.Publisher in
+        static let main = Thunk<States.Main, Action.Async, Action.Sync, Void> { _, action, _ -> EitherAction<Action.Async, Action.Sync>.Publisher in
             switch action {
             case .noOp:
                 return Empty()
@@ -47,9 +47,9 @@ private enum Redux: StoreParameter {
     }
 
     enum SideEffects: SideEffectParameter {
-        static let main = SideEffect<Action.Refined, Void>(logging)
+        static let main = SideEffect<Action.Sync, Void>(logging)
 
-        static let logging = SideEffect<Action.Refined, Void> { action, _ in
+        static let logging = SideEffect<Action.Sync, Void> { action, _ in
             print(action)
         }
     }
@@ -75,8 +75,8 @@ private enum Redux: StoreParameter {
 
 private enum Redux2: StoreParameter {
     enum Action: ActionProtocol {
-        typealias Raw = Never
-        enum Refined: BindableAction {
+        typealias Async = Never
+        enum Sync: BindableAction {
             case goToFirstScreen
             case goToSecondScreen
             case binding(BindingAction<States.Main>)
@@ -84,7 +84,7 @@ private enum Redux2: StoreParameter {
     }
 
     enum Reducers: ReducerParameter {
-        static let main = Reducer<States.Main, Action.Refined, Void> { state, action, _ in
+        static let main = Reducer<States.Main, Action.Sync, Void> { state, action, _ in
             switch action {
             case .goToFirstScreen:
                 state.screen = .primary
@@ -97,18 +97,18 @@ private enum Redux2: StoreParameter {
     }
 
     enum Middlewares: MiddlewareParameter {
-        static let main = Middleware<States.Main, Action.Raw, Action.Refined, Void>()
+        static let main = Middleware<States.Main, Action.Async, Action.Sync, Void>()
     }
 
     enum Thunks: ThunkParameter {
-        static let main = Thunk<States.Main, Action.Raw, Action.Refined, Void> { _, _, _ -> ActionStrata<Action.Raw, Action.Refined>.Publisher in
+        static let main = Thunk<States.Main, Action.Async, Action.Sync, Void> { _, _, _ -> EitherAction<Action.Async, Action.Sync>.Publisher in
         }
     }
 
     enum SideEffects: SideEffectParameter {
-        static let main = SideEffect<Action.Refined, Void>(logging)
+        static let main = SideEffect<Action.Sync, Void>(logging)
 
-        static let logging = SideEffect<Action.Refined, Void> { action, _ in
+        static let logging = SideEffect<Action.Sync, Void> { action, _ in
             print(action)
         }
     }

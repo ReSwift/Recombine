@@ -299,7 +299,7 @@ public extension StoreProtocol {
     func binding<Value>(
         _ keyPath: WritableKeyPath<State, BindableState<Value>>
     ) -> Binding<Value>
-        where RefinedAction: BindableAction, RefinedAction.State == State, Value: Equatable
+        where SyncAction: BindableAction, SyncAction.State == State, Value: Equatable
     {
         binding(
             get: { $0[keyPath: keyPath].wrappedValue },
@@ -501,7 +501,7 @@ public extension BindingAction {
 }
 
 #if compiler(>=5.4)
-    public extension Reducer where RefinedAction: BindableAction, State == RefinedAction.State {
+    public extension Reducer where SyncAction: BindableAction, State == SyncAction.State {
         /// Returns a reducer that applies ``BindingAction`` mutations to `State` before running this
         /// reducer's logic.
         ///
@@ -529,7 +529,7 @@ public extension BindingAction {
         ///   reducer's logic.
         func binding() -> Self {
             Self { state, action, environment in
-                guard let bindingAction = (/RefinedAction.binding).extract(from: action) else {
+                guard let bindingAction = (/SyncAction.binding).extract(from: action) else {
                     return self(state: &state, action: action, environment: environment)
                 }
                 bindingAction.set(&state)
@@ -540,27 +540,27 @@ public extension BindingAction {
 #endif
 
 public extension StoreProtocol {
-    /// Create a SwiftUI Binding from a lensing function and a `RefinedAction`.
+    /// Create a SwiftUI Binding from a lensing function and a `SyncAction`.
     /// - Parameters:
     ///   - lens: A lens to the state property.
-    ///   - action: The refined action which will be called when the value is changed.
-    /// - Returns: A `Binding` whose getter is the property and whose setter dispatches the refined action.
+    ///   - action: The synchronous action which will be called when the value is changed.
+    /// - Returns: A `Binding` whose getter is the property and whose setter dispatches the synchronous action.
     func binding<Value>(
         get lens: @escaping (State) -> Value,
-        send transform: @escaping (Value) -> RefinedAction
+        send transform: @escaping (Value) -> SyncAction
     ) -> Binding<Value> {
         .init(
             get: { lens(state) },
-            set: { dispatch(refined: transform($0)) }
+            set: { dispatch(sync: transform($0)) }
         )
     }
 
-    /// Create a SwiftUI Binding from the `State` of the store and a `RefinedAction`.
+    /// Create a SwiftUI Binding from the `State` of the store and a `SyncAction`.
     /// - Parameters:
-    ///   - action: The refined action which will be called when the value is changed.
-    /// - Returns: A `Binding` whose getter is the state and whose setter dispatches the refined action.
+    ///   - action: The synchronous action which will be called when the value is changed.
+    /// - Returns: A `Binding` whose getter is the state and whose setter dispatches the synchronous action.
     func binding(
-        send transform: @escaping (State) -> RefinedAction
+        send transform: @escaping (State) -> SyncAction
     ) -> Binding<State> {
         binding(
             get: { $0 },
@@ -568,48 +568,48 @@ public extension StoreProtocol {
         )
     }
 
-    /// Create a SwiftUI Binding from a lensing function when the value of that function is equivalent to `RefinedAction`.
+    /// Create a SwiftUI Binding from a lensing function when the value of that function is equivalent to `SyncAction`.
     /// - Parameters:
     ///   - get: A lens to the state property.
-    /// - Returns: A `Binding` whose getter is the property and whose setter dispatches the store's refined action.
+    /// - Returns: A `Binding` whose getter is the property and whose setter dispatches the store's synchronous action.
     func binding<Value>(
         get lens: @escaping (State) -> Value
-    ) -> Binding<Value> where RefinedAction == Value {
+    ) -> Binding<Value> where SyncAction == Value {
         binding(
             get: lens,
             send: { $0 }
         )
     }
 
-    /// Create a SwiftUI Binding from the `State` when its value is equivalent to `RefinedAction`.
-    /// - Returns: A `Binding` whose getter is the state and whose setter dispatches the store's refined action.
-    func binding() -> Binding<State> where RefinedAction == State {
+    /// Create a SwiftUI Binding from the `State` when its value is equivalent to `SyncAction`.
+    /// - Returns: A `Binding` whose getter is the state and whose setter dispatches the store's synchronous action.
+    func binding() -> Binding<State> where SyncAction == State {
         binding(get: { $0 })
     }
 }
 
 public extension StoreProtocol {
-    /// Create a SwiftUI Binding from a lensing function and a `RawAction`.
+    /// Create a SwiftUI Binding from a lensing function and a `AsyncAction`.
     /// - Parameters:
     ///   - lens: A lens to the state property.
-    ///   - action: The refined action which will be called when the value is changed.
-    /// - Returns: A `Binding` whose getter is the property and whose setter dispatches the refined action.
+    ///   - action: The synchronous action which will be called when the value is changed.
+    /// - Returns: A `Binding` whose getter is the property and whose setter dispatches the synchronous action.
     func binding<Value>(
         get lens: @escaping (State) -> Value,
-        send transform: @escaping (Value) -> RawAction
+        send transform: @escaping (Value) -> AsyncAction
     ) -> Binding<Value> {
         .init(
             get: { lens(state) },
-            set: { dispatch(raw: transform($0)) }
+            set: { dispatch(async: transform($0)) }
         )
     }
 
-    /// Create a SwiftUI Binding from the `State` of the store and a `RawAction`.
+    /// Create a SwiftUI Binding from the `State` of the store and a `AsyncAction`.
     /// - Parameters:
-    ///   - action: The refined action which will be called when the value is changed.
-    /// - Returns: A `Binding` whose getter is the state and whose setter dispatches the refined action.
+    ///   - action: The synchronous action which will be called when the value is changed.
+    /// - Returns: A `Binding` whose getter is the state and whose setter dispatches the synchronous action.
     func binding(
-        send transform: @escaping (State) -> RawAction
+        send transform: @escaping (State) -> AsyncAction
     ) -> Binding<State> {
         binding(
             get: { $0 },

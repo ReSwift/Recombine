@@ -1,10 +1,10 @@
 import Combine
 import SwiftUI
 
-public struct StoreLens<State: Equatable, RawAction, RefinedAction>: StoreProtocol {
+public struct StoreLens<State: Equatable, AsyncAction, SyncAction>: StoreProtocol {
     public var combineIdentifier: CombineIdentifier = .init()
 
-    public typealias Action = ActionStrata<RawAction, RefinedAction>
+    public typealias Action = EitherAction<AsyncAction, SyncAction>
     public typealias Dispatch = (Bool, Bool, [Action]) -> Void
     private let _dispatch: Dispatch
 
@@ -43,9 +43,9 @@ public struct StoreLens<State: Equatable, RawAction, RefinedAction>: StoreProtoc
     }
 }
 
-public class LensedStore<State: Equatable, RawAction, RefinedAction>: StoreProtocol, ObservableObject {
-    public typealias Action = ActionStrata<RawAction, RefinedAction>
-    public typealias Underlying = StoreLens<State, RawAction, RefinedAction>
+public class LensedStore<State: Equatable, AsyncAction, SyncAction>: StoreProtocol, ObservableObject {
+    public typealias Action = EitherAction<AsyncAction, SyncAction>
+    public typealias Underlying = StoreLens<State, AsyncAction, SyncAction>
 
     private let underlying: Underlying
     private var cancellable: AnyCancellable?

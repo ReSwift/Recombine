@@ -1,5 +1,5 @@
-public struct SideEffect<RefinedAction, Environment> {
-    public typealias Function = ([RefinedAction], Environment) -> Void
+public struct SideEffect<SyncAction, Environment> {
+    public typealias Function = ([SyncAction], Environment) -> Void
     internal let closure: Function
 
     /// Create a passthrough `SideEffect`.

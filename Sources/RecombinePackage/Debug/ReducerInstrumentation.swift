@@ -37,11 +37,11 @@ public extension Reducer {
             var actionOutput: String!
             if log.signpostsEnabled {
                 actionOutput = debugCaseOutput(action)
-                os_signpost(.begin, log: log, name: "RefinedAction", "%s%s", prefix, actionOutput)
+                os_signpost(.begin, log: log, name: "SyncAction", "%s%s", prefix, actionOutput)
             }
             self(state: &state, action: action, environment: environment)
             if log.signpostsEnabled {
-                os_signpost(.end, log: log, name: "RefinedAction")
+                os_signpost(.end, log: log, name: "SyncAction")
             }
         }
     }

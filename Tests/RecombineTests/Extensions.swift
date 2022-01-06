@@ -46,7 +46,7 @@ extension XCTestCase {
         timeout: TimeInterval = 1,
         serially: Bool = false,
         collect: Bool = false,
-        actions: [ActionStrata<Store.RawAction, Store.RefinedAction>],
+        actions: [EitherAction<Store.AsyncAction, Store.SyncAction>],
         keyPath: KeyPath<Store.State, State>,
         value: State
     ) throws {
@@ -96,7 +96,7 @@ extension XCTestCase {
         timeout: TimeInterval = 1,
         serially: Bool = false,
         collect: Bool = false,
-        actions: [ActionStrata<Store.RawAction, Store.RefinedAction>],
+        actions: [EitherAction<Store.AsyncAction, Store.SyncAction>],
         keyPath: KeyPath<Store.State, State>,
         values: [State]
     ) throws {

@@ -21,7 +21,7 @@ class StoreMiddlewareTests: XCTestCase {
         try nextEquals(
             store,
             actions: [
-                .refined(.string("OK")),
+                .sync(.string("OK")),
             ],
             keyPath: \.value,
             value: "OK First Middleware Second Middleware"
@@ -32,11 +32,11 @@ class StoreMiddlewareTests: XCTestCase {
      it reruns for dispatching
      */
     func testRedispatch() throws {
-        let middleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction.Raw, TestFakes.SetAction.Refined, Void>({ _, action, dispatch, _ -> [TestFakes.SetAction.Refined] in
+        let middleware = Middleware<TestFakes.StringTest.State, TestFakes.SetAction.Async, TestFakes.SetAction.Sync, Void>({ _, action, dispatch, _ -> [TestFakes.SetAction.Sync] in
             switch action {
             case let .string(value):
                 if !value.contains("Middleware") {
-                    dispatch(.refined(.string(value + " Middleware")))
+                    dispatch(.sync(.string(value + " Middleware")))
                     return []
                 }
             default:
@@ -57,7 +57,7 @@ class StoreMiddlewareTests: XCTestCase {
         try nextEquals(
             store,
             actions: [
-                .refined(.string("OK")),
+                .sync(.string("OK")),
             ],
             keyPath: \.value,
             value: "OK Middleware"
@@ -80,7 +80,7 @@ class StoreMiddlewareTests: XCTestCase {
         try nextEquals(
             store,
             actions: [
-                .raw(.first("OK")),
+                .async(.first("OK")),
             ],
             keyPath: \.value,
             value: "OK First Thunk Second Thunk"
@@ -91,7 +91,7 @@ class StoreMiddlewareTests: XCTestCase {
      it actions should be multiplied via the increase function
      */
     func testMiddlewareMultiplies() throws {
-        let multiplexingMiddleware = Middleware<TestFakes.CounterTest.State, TestFakes.SetAction.Raw, TestFakes.SetAction.Refined, Void>({ _, action, _, _ in
+        let multiplexingMiddleware = Middleware<TestFakes.CounterTest.State, TestFakes.SetAction.Async, TestFakes.SetAction.Sync, Void>({ _, action, _, _ in
             Array(repeating: action, count: 3)
         })
         let store = Store(
@@ -106,7 +106,7 @@ class StoreMiddlewareTests: XCTestCase {
         try nextEquals(
             store,
             actions: [
-                .refined(.noop),
+                .sync(.noop),
             ],
             keyPath: \.count,
             value: 3
@@ -117,8 +117,8 @@ class StoreMiddlewareTests: XCTestCase {
      it actions should be multiplied via the increase function
      */
     func testThunkMultiplies() throws {
-        let multiplexingThunk = Thunk<TestFakes.CounterTest.State, TestFakes.SetAction.Raw, TestFakes.SetAction.Refined, Void> { _, action, _ -> AnyPublisher<ActionStrata<TestFakes.SetAction.Raw, TestFakes.SetAction.Refined>, Never> in
-            let transformed: TestFakes.SetAction.Refined
+        let multiplexingThunk = Thunk<TestFakes.CounterTest.State, TestFakes.SetAction.Async, TestFakes.SetAction.Sync, Void> { _, action, _ -> AnyPublisher<EitherAction<TestFakes.SetAction.Async, TestFakes.SetAction.Sync>, Never> in
+            let transformed: TestFakes.SetAction.Sync
             switch action {
             case .noop:
                 transformed = .noop
@@ -127,9 +127,9 @@ class StoreMiddlewareTests: XCTestCase {
             case let .string(value):
                 transformed = .string(value)
             }
-            return [transformed, transformed, transformed].publisher.map { .refined($0) }.eraseToAnyPublisher()
+            return [transformed, transformed, transformed].publisher.map { .sync($0) }.eraseToAnyPublisher()
         }
-        .debug(rawAction: .self, refinedAction: .self)
+        .debug(asyncAction: .self, syncAction: .self)
         let store = Store(
             state: TestFakes.CounterTest.State(count: 0),
             reducer: increaseByOneReducer,
@@ -142,7 +142,7 @@ class StoreMiddlewareTests: XCTestCase {
             store,
             count: 3,
             actions: [
-                .raw(.noop),
+                .async(.noop),
             ],
             keyPath: \.count,
             values: [1, 2, 3]

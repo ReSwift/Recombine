@@ -12,11 +12,11 @@ class MockReducerContainer<Action> {
     }
 }
 
-let increaseByOneReducer: Reducer<TestFakes.CounterTest.State, TestFakes.SetAction.Refined, Void> = .init { state, _, _ in
+let increaseByOneReducer: Reducer<TestFakes.CounterTest.State, TestFakes.SetAction.Sync, Void> = .init { state, _, _ in
     state.count += 1
 }.debug("-_1")
 
-let increaseByTwoReducer: Reducer<TestFakes.CounterTest.State, TestFakes.SetAction.Refined, Void> = .init { state, _, _ in
+let increaseByTwoReducer: Reducer<TestFakes.CounterTest.State, TestFakes.SetAction.Sync, Void> = .init { state, _, _ in
     state.count += 2
 }.debug("-_2")
 
@@ -25,8 +25,8 @@ class ReducerTests: XCTestCase {
      it calls each of the reducers with the given action exactly once
      */
     func testCallsReducersOnce() {
-        let mockReducer1 = MockReducerContainer<TestFakes.SetAction.Refined>()
-        let mockReducer2 = MockReducerContainer<TestFakes.SetAction.Refined>()
+        let mockReducer1 = MockReducerContainer<TestFakes.SetAction.Sync>()
+        let mockReducer2 = MockReducerContainer<TestFakes.SetAction.Sync>()
         let combinedReducer = Reducer(mockReducer1.reducer, mockReducer2.reducer)
 
         var state = TestFakes.CounterTest.State()
