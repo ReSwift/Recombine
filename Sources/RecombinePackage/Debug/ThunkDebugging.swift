@@ -58,10 +58,11 @@ public extension Thunk {
                 let debugEnvironment = toDebugEnvironment(environment)
                 let transformed = transform(state, receivedAction, environment)
                 let printPrefix = "\(prefix.isEmpty.if(true: "", false: "\(prefix): "))thunk"
+                let token = String(Int.random(in: 0 ... Int.max), radix: 16, uppercase: true).prefix(4)
                 return transformed
                     .handleEvents(
                         receiveSubscription: { _ in
-                            debugEnvironment.printer("\(printPrefix) started")
+                            debugEnvironment.printer("\(printPrefix) \(token) started")
                         },
                         receiveOutput: { action in
                             let description = debugActionOutput(
@@ -71,13 +72,13 @@ public extension Thunk {
                                 syncAction: toLocalSyncAction,
                                 actionFormat: actionFormat
                             )
-                            debugEnvironment.printer("\(printPrefix) produced:\(description)")
+                            debugEnvironment.printer("\(printPrefix) \(token) produced:\(description)")
                         },
                         receiveCompletion: { _ in
-                            debugEnvironment.printer("\(printPrefix) finished")
+                            debugEnvironment.printer("\(printPrefix) \(token) finished")
                         },
                         receiveCancel: {
-                            debugEnvironment.printer("\(printPrefix) cancelled")
+                            debugEnvironment.printer("\(printPrefix) \(token) cancelled")
                         }
                     )
                     .eraseToAnyPublisher()

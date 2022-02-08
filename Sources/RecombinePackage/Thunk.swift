@@ -5,7 +5,7 @@ import Combine
 /// `Thunk` is generic over 3 types:
 /// * `State`: The data structure which represents the current app state.
 /// * `Input`: Most commonly async actions, this is the value that will be transformed into the `Output`.
-/// * `Output`: `ActionStrata`, itself generic over async/sync actions. This is the result of the `Input`'s transformation, which is then sent to the store's `Reducer`
+/// * `Output`: `EitherAction`, itself generic over async/sync actions. This is the result of the `Input`'s transformation, which is then sent to the store's `Reducer`
 ///
 /// When creating the thunk, you pass in the `State`, `Input`, and `Output` in the angle brackets, and then a closure which takes two arguments –  a publisher of `State`, the  `Input`, and which returns an `AnyPublisher` of the `Output`.
 ///
