@@ -2,6 +2,12 @@ import CasePaths
 import CustomDump
 import Foundation
 
+struct DebugToken: CustomStringConvertible {
+    var description: String {
+        .init(String(Int.random(in: 0 ... Int.max), radix: 16, uppercase: true).prefix(4))
+    }
+}
+
 /// Determines how the string description of an action should be printed when using the
 /// ``Reducer/debug(_:state:action:actionFormat:environment:)`` higher-order reducer.
 public enum ActionFormat {

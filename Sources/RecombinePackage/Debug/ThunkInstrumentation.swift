@@ -34,12 +34,13 @@ extension Publisher where Failure == Never {
         actionOutput: String
     ) -> Publishers.HandleEvents<Self> {
         let sid = OSSignpostID(log: log)
-
+        let token = DebugToken().description
+        let printPrefix = "\(prefix)-\(token)"
         return handleEvents(
             receiveSubscription: { _ in
                 if log.signpostsEnabled {
                     os_signpost(
-                        .begin, log: log, name: "Thunk", signpostID: sid, "%sStarted from %s", prefix,
+                        .begin, log: log, name: "Thunk", signpostID: sid, "%sStarted from %s", printPrefix,
                         actionOutput
                     )
                 }
@@ -47,7 +48,7 @@ extension Publisher where Failure == Never {
             receiveOutput: {
                 if log.signpostsEnabled {
                     os_signpost(
-                        .event, log: log, name: "Thunk Output", "%sOutput from %s: %s", prefix, actionOutput, debugCaseOutput($0)
+                        .event, log: log, name: "Thunk Output", "%sOutput from %s: %s", printPrefix, actionOutput, debugCaseOutput($0)
                     )
                 }
             },
@@ -55,13 +56,13 @@ extension Publisher where Failure == Never {
                 switch completion {
                 case .finished:
                     if log.signpostsEnabled {
-                        os_signpost(.end, log: log, name: "Thunk", signpostID: sid, "%sFinished", prefix)
+                        os_signpost(.end, log: log, name: "Thunk", signpostID: sid, "%sFinished", printPrefix)
                     }
                 }
             },
             receiveCancel: {
                 if log.signpostsEnabled {
-                    os_signpost(.end, log: log, name: "Thunk", signpostID: sid, "%sCancelled", prefix)
+                    os_signpost(.end, log: log, name: "Thunk", signpostID: sid, "%sCancelled", printPrefix)
                 }
             }
         )

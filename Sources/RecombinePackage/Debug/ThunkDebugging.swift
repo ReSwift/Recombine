@@ -57,12 +57,12 @@ public extension Thunk {
             return .init { state, receivedAction, environment -> AnyPublisher<Action, Never> in
                 let debugEnvironment = toDebugEnvironment(environment)
                 let transformed = transform(state, receivedAction, environment)
-                let printPrefix = "\(prefix.isEmpty.if(true: "", false: "\(prefix): "))thunk"
-                let token = String(Int.random(in: 0 ... Int.max), radix: 16, uppercase: true).prefix(4)
+                let token = DebugToken().description
+                let printPrefix = "\(prefix.isEmpty.if(true: "", false: "\(prefix): "))thunk-\(token)"
                 return transformed
                     .handleEvents(
                         receiveSubscription: { _ in
-                            debugEnvironment.printer("\(printPrefix) \(token) started")
+                            debugEnvironment.printer("\(printPrefix) started")
                         },
                         receiveOutput: { action in
                             let description = debugActionOutput(
@@ -72,13 +72,13 @@ public extension Thunk {
                                 syncAction: toLocalSyncAction,
                                 actionFormat: actionFormat
                             )
-                            debugEnvironment.printer("\(printPrefix) \(token) produced:\(description)")
+                            debugEnvironment.printer("\(printPrefix) produced:\(description)")
                         },
                         receiveCompletion: { _ in
-                            debugEnvironment.printer("\(printPrefix) \(token) finished")
+                            debugEnvironment.printer("\(printPrefix) finished")
                         },
                         receiveCancel: {
-                            debugEnvironment.printer("\(printPrefix) \(token) cancelled")
+                            debugEnvironment.printer("\(printPrefix) cancelled")
                         }
                     )
                     .eraseToAnyPublisher()
