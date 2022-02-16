@@ -35,9 +35,9 @@ let thunk = Thunk<TestFakes.StringTest.State, TestFakes.ThunkAsyncAction, TestFa
     }
 }.debug("thunk")
 
-let stateAccessingThunk = Thunk<TestFakes.StringTest.State, TestFakes.SetAction.Async, TestFakes.SetAction.Sync, Void> { state, action, _ -> AnyPublisher<EitherAction<TestFakes.SetAction.Async, TestFakes.SetAction.Sync>, Never> in
+let stateAccessingThunk = Thunk<TestFakes.StringTest.State, TestFakes.SetAction.Async, TestFakes.SetAction.Sync, Void> { store, action, _ -> AnyPublisher<EitherAction<TestFakes.SetAction.Async, TestFakes.SetAction.Sync>, Never> in
     if case let .string(value) = action {
-        return state.map {
+        return store.state.map {
             .sync(.string($0.value! + $0.value!))
         }
         .eraseToAnyPublisher()

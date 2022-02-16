@@ -35,12 +35,35 @@ import Combine
 ///
 /// Then, we replace the `URLSession` publisher with the `statePublisher` using `flatMap(_:)`, which itself returns a synchronous action: `.setModel(MyModel)`.
 
+public struct ThunkStore<State, AsyncAction, SyncAction> {
+    public struct Actions {
+        public struct Sync {
+            public struct Middleware {
+                public let pre: AnyPublisher<[SyncAction], Never>
+                public let post: AnyPublisher<[SyncAction], Never>
+            }
+
+            public let middleware: Middleware
+        }
+
+        public struct Async {
+            public let all: AnyPublisher<[AsyncAction], Never>
+        }
+
+        public let sync: Sync
+        public let async: Async
+    }
+
+    public let state: Published<State>.Publisher
+    public let actions: Actions
+}
+
 public struct Thunk<State, AsyncAction, SyncAction, Environment> {
     public typealias Input = AsyncAction
     public typealias Output = SyncAction
     public typealias StatePublisher = Publishers.First<Published<State>.Publisher>
     public typealias Action = EitherAction<Input, Output>
-    public typealias Function = (StatePublisher, Input, Environment) -> AnyPublisher<Action, Never>
+    public typealias Function = (ThunkStore<State, AsyncAction, SyncAction>, Input, Environment) -> AnyPublisher<Action, Never>
     internal let transform: Function
 
     /// Create an empty passthrough `Thunk.`
@@ -82,12 +105,12 @@ public struct Thunk<State, AsyncAction, SyncAction, Environment> {
     ///                     .eraseToAnyPublisher()
     ///
     public init<P: Publisher>(
-        _ transform: @escaping (StatePublisher, Input, Environment) -> P
+        _ transform: @escaping (ThunkStore<State, AsyncAction, SyncAction>, Input, Environment) -> P
     ) where P.Output == Action, P.Failure == Never {
         self.transform = { transform($0, $1, $2).eraseToAnyPublisher() }
     }
 
-    func callAsFunction(state: StatePublisher, input: Input, environment: Environment) -> AnyPublisher<Action, Never> {
-        transform(state, input, environment)
+    func callAsFunction(store: ThunkStore<State, AsyncAction, SyncAction>, input: Input, environment: Environment) -> AnyPublisher<Action, Never> {
+        transform(store, input, environment)
     }
 }

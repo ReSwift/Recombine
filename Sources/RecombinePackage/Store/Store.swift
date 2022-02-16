@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import SwiftUI
 
 public class Store<State: Equatable, AsyncAction, SyncAction>: StoreProtocol, ObservableObject {
     public typealias Dispatch = (Bool, Bool, [Action]) -> Void
@@ -13,7 +14,7 @@ public class Store<State: Equatable, AsyncAction, SyncAction>: StoreProtocol, Ob
     public let stateTransform: (State) -> State = { $0 }
     public let actionPromotion: (SyncAction) -> SyncAction = { $0 }
 
-    private let thunk: (Published<State>.Publisher, AsyncAction) -> AnyPublisher<Action, Never>
+    private let thunk: (ThunkStore<State, AsyncAction, SyncAction>, AsyncAction) -> AnyPublisher<Action, Never>
     private let _asyncActions = PassthroughSubject<[AsyncAction], Never>()
     private let _preMiddlewareSyncActions = PassthroughSubject<[SyncAction], Never>()
     private let _postMiddlewareSyncActions = PassthroughSubject<[SyncAction], Never>()
@@ -32,7 +33,11 @@ public class Store<State: Equatable, AsyncAction, SyncAction>: StoreProtocol, Ob
     ) {
         self.state = state
         self.thunk = {
-            thunk(state: $0.first(), input: $1, environment: environment)
+            thunk(
+                store: $0,
+                input: $1,
+                environment: environment
+            )
         }
 
         Publishers.Zip(
@@ -170,8 +175,24 @@ public class Store<State: Equatable, AsyncAction, SyncAction>: StoreProtocol, Ob
             case let .async(actions):
                 self?._asyncActions.send(actions)
                 return actions.publisher
-                    .flatMap(maxPublishers: maxPublishers) { [thunk, $state] in
-                        thunk($state, $0)
+                    .flatMap(maxPublishers: maxPublishers) { [thunk, $state, preMiddlewareSyncActions, postMiddlewareSyncActions, asyncActions] in
+                        thunk(
+                            .init(
+                                state: $state,
+                                actions: .init(
+                                    sync: .init(
+                                        middleware: .init(
+                                            pre: preMiddlewareSyncActions,
+                                            post: postMiddlewareSyncActions
+                                        )
+                                    ),
+                                    async: .init(
+                                        all: asyncActions
+                                    )
+                                )
+                            ),
+                            $0
+                        )
                     }
                     .flatMap(maxPublishers: maxPublishers, recurse(actions:))
                     .eraseToAnyPublisher()
