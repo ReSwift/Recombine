@@ -2,24 +2,96 @@ import Combine
 import Foundation
 import SwiftUI
 
+public struct StorePublishers<StoreState: Equatable, AsyncAction, SyncAction> {
+    public let state: State
+    public let actions: Actions
+    public let paired: AnyPublisher<Paired, Never>
+
+    public struct State {
+        public let changes: AnyPublisher<StoreState, Never>
+        public let all: AnyPublisher<StoreState, Never>
+    }
+
+    public struct Actions {
+        public struct Sync {
+            public struct Middleware {
+                public let pre: AnyPublisher<SyncAction, Never>
+                public let post: AnyPublisher<SyncAction, Never>
+            }
+
+            public let middleware: Middleware
+        }
+
+        public struct Async {
+            public let all: AnyPublisher<AsyncAction, Never>
+        }
+
+        public let sync: Sync
+        public let async: Async
+        public var all: AnyPublisher<EitherAction<AsyncAction, SyncAction>, Never> {
+            async.all
+                .map { .async($0) }
+                .merge(with: sync.middleware.post.map { .sync($0) })
+                .eraseToAnyPublisher()
+        }
+    }
+
+    public struct Paired {
+        struct PairedState: Equatable {
+            let previous: StoreState
+            let current: StoreState
+        }
+
+        let actions: [SyncAction]
+        let state: PairedState
+    }
+}
+
 public class Store<State: Equatable, AsyncAction, SyncAction>: StoreProtocol, ObservableObject {
     public typealias Dispatch = (Bool, Bool, [Action]) -> Void
     public typealias BaseState = State
     public typealias Action = EitherAction<AsyncAction, SyncAction>
-    public typealias ActionsAndState = ([SyncAction], (previous: State, current: State))
+    public typealias Publishers = StorePublishers<State, AsyncAction, SyncAction>
     @Published public private(set) var state: State
     @Published public var dispatchEnabled = true
     public var statePublisher: AnyPublisher<State, Never> { $state.eraseToAnyPublisher() }
     public var underlying: Store<State, AsyncAction, SyncAction> { self }
     public let stateTransform: (State) -> State = { $0 }
     public let actionPromotion: (SyncAction) -> SyncAction = { $0 }
+    public var publishers: StorePublishers<State, AsyncAction, SyncAction> {
+        .init(
+            state: .init(
+                changes: $state.eraseToAnyPublisher(),
+                all: _allStateUpdates.eraseToAnyPublisher()
+            ),
+            actions: .init(
+                sync: .init(
+                    middleware: .init(
+                        pre: _preMiddlewareSyncActions
+                            .flatMap(\.publisher)
+                            .eraseToAnyPublisher(),
+                        post: _postMiddlewareSyncActions
+                            .flatMap(\.publisher)
+                            .eraseToAnyPublisher()
+                    )
+                ),
+                async: .init(
+                    all: _asyncActions
+                        .flatMap(\.publisher)
+                        .eraseToAnyPublisher()
+                )
+            ),
+            paired: _actionsPairedWithState
+                .eraseToAnyPublisher()
+        )
+    }
 
-    private let thunk: (ThunkStore<State, AsyncAction, SyncAction>, AsyncAction) -> AnyPublisher<Action, Never>
-    private let _asyncActions = PassthroughSubject<[AsyncAction], Never>()
-    private let _preMiddlewareSyncActions = PassthroughSubject<[SyncAction], Never>()
-    private let _postMiddlewareSyncActions = PassthroughSubject<[SyncAction], Never>()
-    private let _allStateUpdates = PassthroughSubject<State, Never>()
-    private let _actionsPairedWithState = PassthroughSubject<ActionsAndState, Never>()
+    internal let thunk: (Publishers, AsyncAction) -> AnyPublisher<Action, Never>
+    internal let _asyncActions = PassthroughSubject<[AsyncAction], Never>()
+    internal let _preMiddlewareSyncActions = PassthroughSubject<[SyncAction], Never>()
+    internal let _postMiddlewareSyncActions = PassthroughSubject<[SyncAction], Never>()
+    internal let _allStateUpdates = PassthroughSubject<State, Never>()
+    internal let _actionsPairedWithState = PassthroughSubject<Publishers.Paired, Never>()
     private var cancellables = Set<AnyCancellable>()
 
     public init<S: Scheduler, Environment>(
@@ -40,20 +112,23 @@ public class Store<State: Equatable, AsyncAction, SyncAction>: StoreProtocol, Ob
             )
         }
 
-        Publishers.Zip(
-            _postMiddlewareSyncActions,
-            _allStateUpdates
-                .scan([]) { acc, item in .init((acc + [item]).suffix(2)) }
-                .filter { $0.count == 2 }
-                .map { ($0[0], $0[1]) }
-        )
-        .forward(
-            to: \._actionsPairedWithState,
-            on: self,
-            ownership: .weak,
-            includeFinished: true
-        )
-        .store(in: &cancellables)
+        _postMiddlewareSyncActions
+            .zip(
+                _allStateUpdates
+                    .scan([]) { acc, item in .init((acc + [item]).suffix(2)) }
+                    .filter { $0.count == 2 }
+                    .map { ($0[0], $0[1]) }
+            )
+            .map {
+                .init(actions: $0, state: .init(previous: $1.0, current: $1.1))
+            }
+            .forward(
+                to: \._actionsPairedWithState,
+                on: self,
+                ownership: .weak,
+                includeFinished: true
+            )
+            .store(in: &cancellables)
 
         _preMiddlewareSyncActions
             .flatMap { [$state] actions in
@@ -126,11 +201,10 @@ public class Store<State: Equatable, AsyncAction, SyncAction>: StoreProtocol, Ob
     }
 
     open var actions: AnyPublisher<Action, Never> {
-        Publishers.Merge(
-            _asyncActions.map(Action.async),
-            _postMiddlewareSyncActions.map(Action.sync)
-        )
-        .eraseToAnyPublisher()
+        _asyncActions
+            .map(Action.async)
+            .merge(with: _postMiddlewareSyncActions.map(Action.sync))
+            .eraseToAnyPublisher()
     }
 
     open var asyncActions: AnyPublisher<[AsyncAction], Never> {
@@ -149,7 +223,7 @@ public class Store<State: Equatable, AsyncAction, SyncAction>: StoreProtocol, Ob
         _allStateUpdates.eraseToAnyPublisher()
     }
 
-    open var actionsPairedWithState: AnyPublisher<ActionsAndState, Never> {
+    open var actionsPairedWithState: AnyPublisher<Publishers.Paired, Never> {
         _actionsPairedWithState.eraseToAnyPublisher()
     }
 
@@ -175,24 +249,8 @@ public class Store<State: Equatable, AsyncAction, SyncAction>: StoreProtocol, Ob
             case let .async(actions):
                 self?._asyncActions.send(actions)
                 return actions.publisher
-                    .flatMap(maxPublishers: maxPublishers) { [thunk, $state, preMiddlewareSyncActions, postMiddlewareSyncActions, asyncActions] in
-                        thunk(
-                            .init(
-                                state: $state,
-                                actions: .init(
-                                    sync: .init(
-                                        middleware: .init(
-                                            pre: preMiddlewareSyncActions,
-                                            post: postMiddlewareSyncActions
-                                        )
-                                    ),
-                                    async: .init(
-                                        all: asyncActions
-                                    )
-                                )
-                            ),
-                            $0
-                        )
+                    .flatMap(maxPublishers: maxPublishers) { [thunk, publishers] in
+                        thunk(publishers, $0)
                     }
                     .flatMap(maxPublishers: maxPublishers, recurse(actions:))
                     .eraseToAnyPublisher()

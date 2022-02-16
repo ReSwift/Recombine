@@ -49,8 +49,8 @@ class ObservableStoreDispatchTests: XCTestCase {
         )
 
         let subject = PassthroughSubject<EitherAction<AsyncAction, String>, Never>()
-        let asyncActionsRecorder = store.asyncActions.record()
-        let syncActionsRecorder = store.postMiddlewareSyncActions.record()
+        let asyncActionsRecorder = store.publishers.actions.async.all.record()
+        let syncActionsRecorder = store.publishers.actions.sync.middleware.post.record()
 
         try nextEquals(
             store,
@@ -66,12 +66,12 @@ class ObservableStoreDispatchTests: XCTestCase {
         let asyncExpectation: [AsyncAction] = [.addThrice("1"), .addTwice("1")]
         XCTAssertEqual(
             try wait(for: asyncActionsRecorder.prefix(2), timeout: 10),
-            asyncExpectation.map { [$0] }
+            asyncExpectation.map { $0 }
         )
 
         XCTAssertEqual(
             try wait(for: syncActionsRecorder.prefix(3), timeout: 10),
-            "111".map { [String($0)] }
+            "111".map { String($0) }
         )
     }
 
@@ -84,8 +84,8 @@ class ObservableStoreDispatchTests: XCTestCase {
             publishOn: ImmediateScheduler.shared
         )
 
-        let asyncActionsRecorder = store.asyncActions.record()
-        let syncActionsRecorder = store.postMiddlewareSyncActions.record()
+        let asyncActionsRecorder = store._asyncActions.record()
+        let syncActionsRecorder = store._postMiddlewareSyncActions.record()
 
         try prefixEquals(
             store,
@@ -142,8 +142,8 @@ class ObservableStoreDispatchTests: XCTestCase {
             publishOn: ImmediateScheduler.shared
         )
 
-        let asyncActionsRecorder = store.asyncActions.record()
-        let syncActionsRecorder = store.postMiddlewareSyncActions.record()
+        let asyncActionsRecorder = store._asyncActions.record()
+        let syncActionsRecorder = store._postMiddlewareSyncActions.record()
 
         let value = "5500666221"
 
