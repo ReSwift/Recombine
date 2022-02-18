@@ -49,8 +49,8 @@ class ObservableStoreDispatchTests: XCTestCase {
         )
 
         let subject = PassthroughSubject<EitherAction<AsyncAction, String>, Never>()
-        let asyncActionsRecorder = store.publishers.actions.async.all.record()
-        let syncActionsRecorder = store.publishers.actions.sync.middleware.post.record()
+        let asyncActionsRecorder = store.publishers.actions.async.record()
+        let syncActionsRecorder = store.publishers.actions.sync.post.record()
 
         try nextEquals(
             store,

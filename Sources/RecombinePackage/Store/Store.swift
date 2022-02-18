@@ -14,24 +14,16 @@ public struct StorePublishers<StoreState: Equatable, AsyncAction, SyncAction> {
 
     public struct Actions {
         public struct Sync {
-            public struct Middleware {
-                public let pre: AnyPublisher<SyncAction, Never>
-                public let post: AnyPublisher<SyncAction, Never>
-            }
-
-            public let middleware: Middleware
-        }
-
-        public struct Async {
-            public let all: AnyPublisher<AsyncAction, Never>
+            public let pre: AnyPublisher<SyncAction, Never>
+            public let post: AnyPublisher<SyncAction, Never>
         }
 
         public let sync: Sync
-        public let async: Async
+        public let async: AnyPublisher<AsyncAction, Never>
         public var all: AnyPublisher<EitherAction<AsyncAction, SyncAction>, Never> {
-            async.all
+            async
                 .map { .async($0) }
-                .merge(with: sync.middleware.post.map { .sync($0) })
+                .merge(with: sync.post.map { .sync($0) })
                 .eraseToAnyPublisher()
         }
     }
@@ -66,20 +58,16 @@ public class Store<State: Equatable, AsyncAction, SyncAction>: StoreProtocol, Ob
             ),
             actions: .init(
                 sync: .init(
-                    middleware: .init(
-                        pre: _preMiddlewareSyncActions
-                            .flatMap(\.publisher)
-                            .eraseToAnyPublisher(),
-                        post: _postMiddlewareSyncActions
-                            .flatMap(\.publisher)
-                            .eraseToAnyPublisher()
-                    )
-                ),
-                async: .init(
-                    all: _asyncActions
+                    pre: _preMiddlewareSyncActions
+                        .flatMap(\.publisher)
+                        .eraseToAnyPublisher(),
+                    post: _postMiddlewareSyncActions
                         .flatMap(\.publisher)
                         .eraseToAnyPublisher()
-                )
+                ),
+                async: _asyncActions
+                    .flatMap(\.publisher)
+                    .eraseToAnyPublisher()
             ),
             paired: _actionsPairedWithState
                 .eraseToAnyPublisher()
