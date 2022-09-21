@@ -8,6 +8,7 @@ public struct StorePublishers<StoreState: Equatable, AsyncAction, SyncAction> {
     public let paired: AnyPublisher<Paired, Never>
 
     public struct State {
+        public let current: StoreState
         public let changes: AnyPublisher<StoreState, Never>
         public let all: AnyPublisher<StoreState, Never>
     }
@@ -53,6 +54,7 @@ public class Store<State: Equatable, AsyncAction, SyncAction>: StoreProtocol, Ob
     public var publishers: StorePublishers<State, AsyncAction, SyncAction> {
         .init(
             state: .init(
+                current: state,
                 changes: $state.eraseToAnyPublisher(),
                 all: _allStateUpdates.eraseToAnyPublisher()
             ),

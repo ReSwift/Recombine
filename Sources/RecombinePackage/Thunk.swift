@@ -90,4 +90,6 @@ public struct Thunk<State: Equatable, AsyncAction, SyncAction, Environment> {
     func callAsFunction(store: StorePublishers<State, AsyncAction, SyncAction>, input: Input, environment: Environment) -> AnyPublisher<Action, Never> {
         transform(store, input, environment)
     }
+
+    #warning("Implement convenience function for cancelling a stream when the same action flows through the thunk again")
 }
