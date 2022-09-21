@@ -239,8 +239,12 @@ public class Store<State: Equatable, AsyncAction, SyncAction>: StoreProtocol, Ob
             case let .async(actions):
                 self?._asyncActions.send(actions)
                 return actions.publisher
-                    .flatMap(maxPublishers: maxPublishers) { [thunk, publishers] in
-                        thunk(publishers, $0)
+                    .flatMap(maxPublishers: maxPublishers) { [thunk] action in
+                        self.publisher()
+                            .map(\.publishers)
+                            .flatMap {
+                                thunk($0, action)
+                            }
                     }
                     .flatMap(maxPublishers: maxPublishers, recurse(actions:))
                     .eraseToAnyPublisher()
