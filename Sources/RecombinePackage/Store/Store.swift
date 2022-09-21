@@ -266,6 +266,7 @@ public class Store<State: Equatable, AsyncAction, SyncAction>: StoreProtocol, Ob
             false: recursed
                 .eraseToAnyPublisher()
         )
+        .receive(on: DispatchQueue.main)
         .sink {
             self?._preMiddlewareSyncActions.send($0)
         }
