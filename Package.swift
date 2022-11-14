@@ -16,11 +16,7 @@ let package = Package(
         ),
     ],
     dependencies: [
-        // Lib deps
         .package(url: "https://github.com/groue/CombineExpectations", from: "0.7.0"),
-        // Dev deps
-        .package(url: "https://github.com/nicklockwood/SwiftFormat.git", from: "0.35.8"),
-        .package(url: "https://github.com/shibapm/Komondor.git", from: "1.0.0"),
         .package(url: "https://github.com/pointfreeco/swift-case-paths", from: "0.7.0"),
         .package(url: "https://github.com/pointfreeco/swift-custom-dump", from: "0.2.1"),
     ],
@@ -45,18 +41,3 @@ let package = Package(
         ),
     ]
 )
-
-#if canImport(PackageConfig)
-    import PackageConfig
-
-    let config = PackageConfiguration([
-        "komondor": [
-            "pre-push": "swift test",
-            "pre-commit": [
-                "swift test",
-                "swift run swiftformat .",
-                "git add .",
-            ],
-        ],
-    ]).write()
-#endif
